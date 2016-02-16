@@ -1,4 +1,4 @@
-.. _edX Platform User API:
+.. _edX Platform User API Version 1.0:
 
 #################################
 User API Version 1.0
@@ -8,5 +8,6 @@ User API Version 1.0
     :maxdepth: 2
     
     overview
+    endpoints
     accounts
     preferences

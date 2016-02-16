@@ -64,8 +64,7 @@ class XmlImportFactory(Factory):
     Factory for generating XmlImportData's, which can hold all the data needed
     to run an XModule XML import
     """
-    class Meta(object):
-        model = XmlImportData
+    FACTORY_FOR = XmlImportData
 
     filesystem = MemoryFS()
     xblock_mixins = (InheritanceMixin, XModuleMixin)

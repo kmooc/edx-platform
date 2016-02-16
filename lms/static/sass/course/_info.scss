@@ -1,59 +1,11 @@
-.home {
-  @include clearfix();
-  max-width: 1140px;
-  margin: 0 auto;
-  padding: $baseline $baseline ($baseline/2) $baseline;
-
-  .page-header-main {
-    display: inline-block;
-    width: flex-grid(8, 12);
-    margin: 0;
-
-    .page-title {
-      margin-bottom: 5px;
-      color: $dark-gray1;
-      font-size: 24px;
-    }
-
-    .page-subtitle {
-      color: $dark-gray2;
-      font-size: 14px;
-      text-transform: none;
-    }
-  }
-
-  .page-header-secondary {
-    @include float(right);
-    display: inline-block;
-    margin: ($baseline/2);
-    padding: ($baseline/2) ($baseline*0.75);
-    background-color: $blue;
-    border-radius: 2px;
-
-    .last-accessed-link {
-      @extend %t-title6;
-      color: $very-light-text;
-    }
-  }
-}
-
 div.info-wrapper {
-
-  background-color: $homepage-background;
 
   section.updates {
     @extend .content;
-    @include padding-left($baseline);
     line-height: lh();
-    width: 100%;
-    display: block;
 
-    h1 {
-      @include text-align(left);
-      @extend %t-strong;
-      @extend %t-title6;
-      margin-bottom: $baseline;
-      font-style: normal;
+    > h1 {
+      @extend .top-header;
     }
 
     > p {
@@ -65,31 +17,12 @@ div.info-wrapper {
       margin-bottom: lh();
       padding-left: 0;
 
-      .updates-article {
-        border-radius:3px;
-        background-color: $white;
-        border:1px solid transparent;
-        &:hover {
-          border: 1px solid $gray-l3;
-        }
-      }
-
-      .show-older-updates {
-        @extend %btn-pl-white-base;
-        padding: ($baseline/2);
-        @include font-size(14);
-        width: 100%;
-        display: block;
-        text-align: center;
-        cursor: pointer;
-      }
-
       > li,article {
         @extend .clearfix;
-        padding: $baseline;
+        border-bottom: 1px solid lighten($border-color, 10%);
         list-style-type: none;
         margin-bottom: lh(1.5);
-        background-color: $white;
+        padding-bottom: lh(.75);
 
         ol, ul {
           ol,ul {
@@ -97,25 +30,11 @@ div.info-wrapper {
           }
         }
 
-        h2.date {
-          @extend %t-title9;
-          margin-bottom: ($baseline/4);
-          text-transform: none;
-          background: url('#{$static-path}/images/calendar-icon.png') 0 center no-repeat;
-          @include padding-left($baseline);
-          @include float(left);
-        }
-
-        .toggle-visibility-button {
-          @extend %t-title9;
-          @include float(right);
-          cursor: pointer;
-        }
-
-        .toggle-visibility-element {
-          content:'';
-          display:block;
-          clear: both;
+        h2 {
+          font-size: $body-font-size;
+          font-weight: bold;
+          background: url('../images/calendar-icon.png') 0 center no-repeat;
+          padding-left: $baseline;
         }
 
         section.update-description {
@@ -159,12 +78,12 @@ div.info-wrapper {
   }
 
   section.handouts {
-    padding: 20px 30px;
-    margin: 0;
     @extend .sidebar;
-    background: rgba(0, 0, 0, 0);
+    border-radius: 0 4px 4px 0;
+    @include border-left(1px solid #ddd);
     box-shadow: none;
     font-size: 14px;
+    padding:0 15px;
 
     a {
       color: $link-color;
@@ -176,21 +95,17 @@ div.info-wrapper {
     }
 
     h1 {
-      @include text-align(left);
-      @extend %t-strong;
-      @extend %t-title6;
+      @include text-align(center);
       margin-bottom: 0;
-      padding: 12px 26px 20px 0;
+      padding: 30px 10px 0 10px;
+      font-size: 18px;
       font-style: normal;
-    }
-
-    ul {
-      margin-bottom: 14px;
+      font-weight: bold;
     }
 
     ol {
-      margin-bottom: 14px;
       li {
+        margin: 0 26px 14px 26px;
         @include text-align(left);
 
         a {
@@ -198,8 +113,7 @@ div.info-wrapper {
           padding: 0;
           color: $link-color;
 
-          &:hover,
-          &:focus {
+          &:hover, &:focus {
             background: transparent;
           }
         }
@@ -234,8 +148,7 @@ div.info-wrapper {
             display: inline-block;
             padding: 0;
 
-            &:hover,
-            &:focus {
+            &:hover, &:focus {
               background: transparent;
             }
           }
@@ -256,8 +169,7 @@ div.info-wrapper {
               display: inline-block;
               padding: 0;
 
-              &:hover,
-              &:focus {
+              &:hover, &:focus {
                 background: transparent;
               }
             }
@@ -265,7 +177,7 @@ div.info-wrapper {
         }
 
         div.hitarea {
-          background-image: url('#{$static-path}/images/treeview-default.gif') no-repeat;
+          background-image: url('../images/treeview-default.gif') no-repeat;
           display: block;
           height: 100%;
           margin-left: 0;
@@ -273,8 +185,7 @@ div.info-wrapper {
           position: absolute;
           width: 100%;
 
-          &:hover,
-          &:focus {
+          &:hover, &:focus {
             opacity: 0.6;
             filter: alpha(opacity=60);
 

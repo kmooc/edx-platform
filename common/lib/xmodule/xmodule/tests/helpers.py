@@ -3,7 +3,7 @@ Utility methods for unit tests.
 """
 
 import filecmp
-from path import Path as path
+from path import path
 
 
 def directories_equal(directory1, directory2):

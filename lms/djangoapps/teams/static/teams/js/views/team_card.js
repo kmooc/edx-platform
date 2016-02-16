@@ -1,53 +1,45 @@
-(function (define) {
+;(function (define) {
     'use strict';
     define([
-        'jquery',
         'backbone',
         'underscore',
         'gettext',
-        'moment-with-locales',
         'js/components/card/views/card',
-        'teams/js/views/team_utils',
-        'text!teams/templates/team-membership-details.underscore',
-        'text!teams/templates/team-country-language.underscore',
-        'text!teams/templates/date.underscore'
-    ], function (
-        $,
-        Backbone,
-        _,
-        gettext,
-        moment,
-        CardView,
-        TeamUtils,
-        teamMembershipDetailsTemplate,
-        teamCountryLanguageTemplate,
-        dateTemplate
-    ) {
-        var TeamMembershipView, TeamCountryLanguageView, TeamActivityView, TeamCardView;
+        'text!teams/templates/team-country-language.underscore'
+    ], function (Backbone, _, gettext, CardView, teamCountryLanguageTemplate) {
+        var TeamMembershipView, TeamCountryLanguageView, TeamCardView;
 
         TeamMembershipView = Backbone.View.extend({
             tagName: 'div',
             className: 'team-members',
-            template: _.template(teamMembershipDetailsTemplate),
+            template: _.template(
+                '<span class="member-count"><%= membership_message %></span>' +
+                '<ul class="list-member-thumbs"></ul>'
+            ),
 
             initialize: function (options) {
                 this.maxTeamSize = options.maxTeamSize;
-                this.memberships = options.memberships;
             },
 
             render: function () {
-                var allMemberships = _(this.memberships).sortBy(function (member) {
-                    return new Date(member.last_activity_at);
-                }).reverse(),
-                    displayableMemberships = allMemberships.slice(0, 5),
+                var memberships = this.model.get('membership'),
                     maxMemberCount = this.maxTeamSize;
                 this.$el.html(this.template({
-                    membership_message: TeamUtils.teamCapacityText(allMemberships.length, maxMemberCount),
-                    memberships: displayableMemberships,
-                    has_additional_memberships: displayableMemberships.length < allMemberships.length,
-                    // Translators: "and others" refers to fact that additional members of a team exist that are not displayed.
-                    sr_message: gettext('and others')
+                    membership_message: interpolate(
+                        // Translators: The following message displays the number of members on a team.
+                        ngettext(
+                            '%(member_count)s / %(max_member_count)s Member',
+                            '%(member_count)s / %(max_member_count)s Members',
+                            maxMemberCount
+                        ),
+                        {member_count: memberships.length, max_member_count: maxMemberCount}, true
+                    )
                 }));
+                _.each(memberships, function (membership) {
+                    this.$('list-member-thumbs').append(
+                        '<li class="item-member-thumb"><img alt="' + membership.user.username + '" src=""></img></li>'
+                    );
+                }, this);
                 return this;
             }
         });
@@ -69,64 +61,42 @@
             }
         });
 
-        TeamActivityView = Backbone.View.extend({
-            tagName: 'div',
-            className: 'team-activity',
-            template: _.template(dateTemplate),
-
-            initialize: function (options) {
-                this.date = options.date;
-            },
-
-            render: function () {
-                var lastActivity = moment(this.date),
-                    currentLanguage = $('html').attr('lang');
-                lastActivity.locale(currentLanguage);
-                this.$el.html(
-                    interpolate(
-                        // Translators: 'date' is a placeholder for a fuzzy, relative timestamp (see: http://momentjs.com/)
-                        gettext("Last activity %(date)s"),
-                        {date: this.template({date: lastActivity.format('MMMM Do YYYY, h:mm:ss a')})},
-                        true
-                    )
-                );
-                this.$('abbr').text(lastActivity.fromNow());
-            }
-        });
-
         TeamCardView = CardView.extend({
             initialize: function () {
                 CardView.prototype.initialize.apply(this, arguments);
                 // TODO: show last activity detail view
                 this.detailViews = [
-                    new TeamMembershipView({memberships: this.model.get('membership'), maxTeamSize: this.maxTeamSize}),
+                    new TeamMembershipView({model: this.teamModel(), maxTeamSize: this.maxTeamSize}),
                     new TeamCountryLanguageView({
-                        model: this.model,
+                        model: this.teamModel(),
                         countries: this.countries,
                         languages: this.languages
-                    }),
-                    new TeamActivityView({date: this.model.get('last_activity_at')})
+                    })
                 ];
-                this.model.on('change:membership', function () {
-                    this.detailViews[0].memberships = this.model.get('membership');
-                }, this);
+            },
+
+            teamModel: function () {
+                if (this.model.has('team')) { return this.model.get('team'); };
+                return this.model;
             },
 
             configuration: 'list_card',
             cardClass: 'team-card',
-            title: function () { return this.model.get('name'); },
-            description: function () { return this.model.get('description'); },
+            title: function () { return this.teamModel().get('name'); },
+            description: function () { return this.teamModel().get('description'); },
             details: function () { return this.detailViews; },
             actionClass: 'action-view',
             actionContent: function() {
                 return interpolate(
                     gettext('View %(span_start)s %(team_name)s %(span_end)s'),
-                    {span_start: '<span class="sr">', team_name: _.escape(this.model.get('name')), span_end: '</span>'},
+                    {span_start: '<span class="sr">', team_name: this.teamModel().get('name'), span_end: '</span>'},
                     true
                 );
             },
-            actionUrl: function () {
-                return '#teams/' + this.model.get('topic_id') + '/' + this.model.get('id');
+            action: function (event) {
+                var url = 'teams/' + this.teamModel().get('topic_id') + '/' + this.teamModel().get('id');
+                event.preventDefault();
+                this.router.navigate(url, {trigger: true});
             }
         });
         return TeamCardView;

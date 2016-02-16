@@ -1,5 +1,5 @@
-define ["jquery", "jquery.ui", "backbone", "common/js/components/views/feedback_prompt",
-        "common/js/components/views/feedback_notification", "coffee/src/views/module_edit", "js/models/module_info", "js/utils/module"],
+define ["jquery", "jquery.ui", "backbone", "js/views/feedback_prompt", "js/views/feedback_notification",
+    "coffee/src/views/module_edit", "js/models/module_info", "js/utils/module"],
 ($, ui, Backbone, PromptView, NotificationView, ModuleEditView, ModuleModel, ModuleUtils) ->
   class TabsEdit extends Backbone.View
 
@@ -89,9 +89,7 @@ define ["jquery", "jquery.ui", "backbone", "common/js/components/views/feedback_
       editor.$el.addClass('new')
       setTimeout(=>
         editor.$el.removeClass('new')
-      , 1000)
-      $('html, body').animate {scrollTop: $('.new-component-item').offset().top}, 500
-      
+      , 500)
 
       editor.createItem(
         @model.get('id'),

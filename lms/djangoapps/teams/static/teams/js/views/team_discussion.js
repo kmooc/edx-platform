@@ -8,6 +8,7 @@
             var TeamDiscussionView = Backbone.View.extend({
                 initialize: function () {
                     window.$$course_id = this.$el.data("course-id");
+                    this.render();
                 },
 
                 render: function () {

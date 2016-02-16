@@ -13,59 +13,18 @@
 // ====================
 .dashboard {
   @include clearfix();
-  padding: ($baseline*2) 0 $baseline 0;
-
-  .wrapper-find-courses {
-    @include float(right);
-    @include margin-left(flex-gutter());
-    width: flex-grid(3);
-    margin-top: ($baseline*2);
-    border-top: 3px solid $blue;
-    padding: $baseline 0;
-
-    .copy {
-      @extend %t-copy-sub1;
-    }
-
-    .btn-find-courses {
-      @extend %btn-pl-elevated-alt;
-    }
-  }
-
-  .wrapper-xseries-certificates{
-    @include float(right);
-    @include margin-left(flex-gutter());
-    width: flex-grid(3);
-
-    .title{
-      @extend %t-title7;
-      @extend %t-weight4;
-    }
-
-    ul{
-      @include padding-left(0);
-      margin-top: ($baseline/2);
-    }
-
-    li{
-      @include line-height(20);
-      list-style-type: none;
-    }
-
-    .copy {
-      @extend %t-copy-sub1;
-      margin-top: ($baseline/2);
-    }
-  }
+  padding: ($baseline*2) 0 ($baseline*1.5) 0;
 
   .profile-sidebar {
     background: transparent;
     @include float(right);
-    @include margin-left(flex-gutter());
-    width: flex-grid(3);
     margin-top: ($baseline*2);
-    border-top: 3px solid $blue;
-    padding: $baseline 0;
+    width: flex-grid(3);
+    box-shadow: 0 0 1px $shadow-l1;
+    border: 1px solid $border-color-2;
+    border-radius: 3px;
+
+    .profile {display:none;}
 
     .user-info {
       @include clearfix();
@@ -74,7 +33,7 @@
         @include box-sizing(border-box);
         @include clearfix();
         margin: 0;
-        padding: 0;
+        padding: $baseline;
         width: flex-grid(12);
 
         li {
@@ -102,7 +61,7 @@
           }
 
           span.title {
-            @extend %t-title6;
+            @extend %t-copy-sub1;
             @extend %t-strong;
 
             a {
@@ -222,11 +181,11 @@
 
 
     .wrapper-header-courses {
-      border-bottom: 4px solid $border-color-l4;
+      border-bottom: 2px solid $border-color-2;
       margin-bottom: $baseline;
 
       .header-courses {
-        @extend %t-title5;
+ //       @extend %t-title5;
         @include padding-right($baseline/2);
       }
     }
@@ -274,38 +233,13 @@
 
       .course-item {
         margin-bottom: $baseline;
-        border-bottom: 4px solid $border-color-l4;
-        padding-bottom: $baseline;
+        border-top: 1px solid $border-color-4;
+        padding: ($baseline*0.5) 0;
 
-        .course-container{
-          border: 1px solid $border-color-l4;
-          border-radius: 3px;
-
-          // CASE: Xseries associated course
-          .label-xseries-association{
-            @include margin($baseline/2, $baseline/5, 0, $baseline/2);
-
-            .xseries-icon{
-              @include float(left);
-
-              @include margin-right($baseline*0.4);
-              background: url('#{$static-path}/images/icon-sm-xseries-black.png') no-repeat;
-              background-color: transparent;
-
-              width: ($baseline*1.1);
-              height: ($baseline*1.1);
-            }
-
-            .message-copy{
-              padding-top: ($baseline/5);
-              @extend %t-action3;
-            }
-          }
-        }
-        &:last-child {
+        &:first-child {
           margin-bottom: 0;
-          border-bottom: none;
-          padding-bottom: 0;
+          border-top: 0;
+          padding-top: 0;
         }
       }
     }
@@ -323,6 +257,8 @@
     @include clearfix();
     @extend %ui-depth2;
     margin: ($baseline/2);
+    position:relative;
+    z-index:auto;
 
     .details {
       @include clearfix();
@@ -342,6 +278,9 @@
           border-radius: ($baseline/5);
           border: 1px solid $dashboard-course-cover-border;
           border-bottom: 4px solid $dashboard-course-cover-border;
+
+          border-width: 1px 1px 2px;
+          border-color: #ddd #ddd #f58026;
 
           .course-image {
             width: 100%;
@@ -390,10 +329,12 @@
       .course-title {
 
         a, span {
-          @extend %t-title3;
+         // @extend %t-title4;
           @extend %t-light;
           display: inline-block;
           margin-bottom: ($baseline/2);
+	  line-height:1.2em;
+	  font-weight:600;
 
           &:hover, &:focus {
             text-decoration: none;
@@ -404,35 +345,40 @@
       .course-info {
         display: block;
         @include float(left);
-        width: flex-grid(4);
-        padding: 0;
-        margin-top: ($baseline/2);
+      //  width: flex-grid(4);
+      //  padding: 0 170px 0 0;
+        padding: 0 30px 0 0;
+        margin-top: ($baseline/4);
 
         [class*="info-"] {
-          color: $gray-d1;
+          color: $gray-d3;
           @extend %t-title6;
           display: inline-block;
         }
 
         .info-date-block {
           @extend %t-title7;
-          color: $gray; // WCAG 2.0 AA compliant
+          color: $gray-l1;
           display: block;
+	  line-height:1em;
         }
       }
 
       .wrapper-course-actions {
         display: block;
         @include float(right);
-        width: flex-grid(8);
-        padding: 0;
-        margin-top: ($baseline/2);
+       // width: flex-grid(8);
+        padding: 20px 0 0 0;
+       // margin-top: ($baseline/4);
+       // position:absolute;
+       bottom:0;
+       right:0;
       }
 
       .course-actions {
 
         // UI: course item actions
-        .action {
+        .action.action-more {
           @include box-sizing(border-box);
           @include margin-right($baseline/2);
           @include float(right);
@@ -440,12 +386,13 @@
           color: $gray-l1;
           border-radius: 3px;
           padding: 12px;
-          border: 1px solid $white;
+          border: 1px solid $gray-l4;
           text-align: center;
 
           &:hover, &:focus {
             color: $gray-d3;
             border: 1px solid $gray-l4;
+	    background:$gray-l4;
           }
 
           // STATE: is-disabled
@@ -495,7 +442,7 @@
               border-radius: 3px;
               margin: ($baseline/4) 0 0 0;
               border: 1px solid $gray-l3;
-              padding: ($baseline/4) ($baseline/2);
+              padding:($baseline/4) ($baseline/2);
               background: $white;
 
               // ui triangle/nub
@@ -529,17 +476,24 @@
               @extend %t-title7;
               display: block;
               margin: 0;
+	      border-top:dotted 1px #c8c8c8;
+	      line-height:30px;
 
               &.is-hidden {
                 display: none;
               }
 
+	      &:first-child {
+		border-top:0;
+	      }
+
               .action {
                 @include margin-right(0);
+		font-size:13px;
 
-                &:hover, &:focus {
-                  border: 1px solid transparent;
-                 }
+		 &:hover {
+		    color:#212121;
+		 }
               }
             }
           }
@@ -579,12 +533,27 @@
       }
 
       .enter-course {
-        @extend %btn-pl-white-base;
+        @extend %btn-pl-primary-base;
         @include float(right);
+	color:$white;
+	border:solid 1px $org-2;
+	background:$org-1;
+	font-weight:700;
 
-        &.archived {
-          @extend %btn-pl-default-base;
-        }
+	&:hover {
+	  color:$white;
+	  border:solid 1px $org-2;
+	  background:$org-2;
+	}
+
+    &:focus {
+	  color:$white;
+	  border:solid 1px $org-2;
+	  background:$org-2;
+	}
+     //   &.archived {
+    //      @extend %btn-pl-default-base;
+    //    }
       }
     }
 
@@ -599,15 +568,32 @@
         padding: 0;
       }
 
+      .credit-eligibility-msg {
+        @include float(left);
+        margin-top: 10px;
+      }
+
+      .purchase_credit {
+        @include float(right);
+      }
+
+      .purchase-credit-btn {
+        @extend %btn-pl-yellow-base;
+      }
+
       .message {
         @extend %ui-depth1;
         border-radius: 3px;
         display: none;
-        margin: $baseline 0 ($baseline/2) 0;
-        padding: ($baseline/2) $baseline;
+        //margin: $baseline 0 ($baseline/2) 0;
+        margin: $baseline 0 0 0;
+
+        //padding: ($baseline/2) $baseline;
+        //padding: 0px $baseline;
+        padding: 0 0 0 10px;
+
         background: $gray-l5;
         border: 1px solid $gray-l4;
-        color: $base-font-color; // Overrides the normal white color in this one case
 
         // STATE: shown
         &.is-shown {
@@ -723,43 +709,20 @@
           }
 
           .wrapper-extended {
-            padding: ($baseline/4) 0;
+            padding: ($baseline/2) 0;
 
             .message-copy {
-              width: flex-grid(9, 12);
-              display: inline-block;
-
-              .message-copy-bold{
-                font-weight: 600;
-              }
+              margin-bottom: $baseline;
             }
           }
 
-          .action-upgrade-container{
-            @include float(right);
-            display: inline-block;
-            margin-top: ($baseline/2);
-          }
           .action-upgrade {
             @extend %btn-primary-green;
             @include clearfix();
             position: relative;
             left: ($baseline/2);
-            padding: ($baseline * 0.4) 0 ($baseline * 0.4) ($baseline * 0.75);
+            padding: 8px $baseline 8px ($baseline*2);
 
-            .action-upgrade-icon{
-              @include float(left);
-              display: inline;
-
-              @include margin-right($baseline*0.4);
-              margin-top: ($baseline/4);
-              background: url('#{$static-path}/images/icon-sm-verified.png') no-repeat;
-              background-position: -($baseline*0.3);
-              background-color: white;
-
-              width: ($baseline*0.8);
-              height: ($baseline*0.7);
-            }
             .deco-graphic {
               position: absolute;
               top: -($baseline/4);
@@ -804,112 +767,6 @@
             .grade-value {
               font-size: 1.2rem;
               font-weight: bold;
-            }
-          }
-
-          .credit-action {
-            .credit-btn {
-              @extend %btn-pl-yellow-base;
-              @include float(right);
-              margin-right: 5px;
-              background-image: none ;
-              text-shadow: none;
-              box-shadow: none;
-              text-transform: none;
-            }
-          }
-
-          .xseries-action{
-            .xseries-msg{
-              @include float(left);
-              width: flex-grid(9, 12);
-            }
-
-            .message-copy{
-              @extend %t-demi-strong;
-              margin-top: 0;
-            }
-
-            .message-copy-bold{
-              @extend %t-strong;
-            }
-
-            .xseries-border-btn {
-              @extend %btn-pl-black-border;
-              @include float(right);
-              position: relative;
-              left: 10px;
-              padding: ($baseline*0.4) ($baseline*0.6);
-              background-image: none ;
-              text-shadow: none;
-              box-shadow: none;
-              text-transform: none;
-
-              .action-xseries-icon{
-                @include float(left);
-                display: inline;
-
-                @include margin-right($baseline*0.4);
-                background: url('#{$static-path}/images/icon-sm-xseries-black.png') no-repeat;
-                background-color: transparent;
-
-                width: ($baseline*1.1);
-                height: ($baseline*1.1);
-              }
-              &:hover,
-              &:focus {
-
-                .action-xseries-icon{
-                  @include float(left);
-                  display: inline;
-
-                  @include margin-right($baseline*0.4);
-                  background: url('#{$static-path}/images/icon-sm-xseries-white.png') no-repeat;
-                  background-color: transparent;
-
-                  width: ($baseline*1.1);
-                  height: ($baseline*1.1);
-                }
-              }
-            }
-
-            .xseries-base-btn {
-              @extend %btn-pl-black-base;
-              @include float(right);
-              position: relative;
-              left: 10px;
-              padding: ($baseline*0.4) ($baseline*0.6);
-              background-image: none ;
-              text-shadow: none;
-              box-shadow: none;
-              text-transform: none;
-
-              .action-xseries-icon{
-                @include float(left);
-                display: inline;
-
-                @include margin-right($baseline*0.4);
-                background: url('#{$static-path}/images/icon-sm-xseries-white.png') no-repeat;
-                background-color: transparent;
-
-                width: ($baseline*1.1);
-                height: ($baseline*1.1);
-              }
-              &:hover,
-              &:focus {
-
-                .action-xseries-icon {
-                  @include float(left);
-                  display: inline;
-
-                  @include margin-right($baseline*0.4);
-                  background: url('#{$static-path}/images/icon-sm-xseries-black.png') no-repeat;
-                  background-color: transparent;
-
-                  width: ($baseline*1.1);
-                  height: ($baseline*1.1);
-                }
-              }
             }
           }
 
@@ -1009,6 +866,7 @@
           &.course-status-certavailable {
 
             .message-copy {
+              padding-top: 4px;
               width: flex-grid(6, 12);
               position: relative;
               @include float(left);

@@ -39,10 +39,7 @@
                                 model: userAccountModel,
                                 title: gettext('Full Name'),
                                 valueAttribute: 'name',
-                                helpMessage: gettext(
-                                    'The name that is used for ID verification and appears on your certificates. Other learners never see your full name. Make sure to enter your name exactly as it appears on your government-issued photo ID, including any non-Roman characters.' /* jshint ignore:line */
-                                ),
-                                persistChanges: true
+                                helpMessage: gettext('The name that appears on your certificates. Other learners never see your full name.')
                             })
                         },
                         {
@@ -52,8 +49,7 @@
                                 valueAttribute: 'email',
                                 helpMessage: interpolate_text(
                                     gettext('The email address you use to sign in. Communications from {platform_name} and your courses are sent to this address.'), {platform_name: platformName}
-                                ),
-                                persistChanges: true
+                                )
                             })
                         },
                         {
@@ -78,8 +74,25 @@
                                 helpMessage: interpolate_text(
                                     gettext('The language used throughout this site. This site is currently available in a limited number of languages.'), {platform_name: platformName}
                                 ),
-                                options: fieldsData.language.options,
-                                persistChanges: true
+                                options: fieldsData.language.options
+                            })
+                        },
+                        {
+                            view: new FieldViews.DropdownFieldView({
+                                model: userAccountModel,
+                                title: gettext('Gender'),
+                                valueAttribute: 'gender',
+                                required: true,
+                                options: fieldsData.gender.options
+                            })
+                        },
+                        {
+                            view: new FieldViews.DropdownFieldView({
+                                model: userAccountModel,
+                                title: gettext('Year of Birth'),
+                                valueAttribute: 'year_of_birth',
+                                required: true,
+                                options: fieldsData['year_of_birth']['options']
                             })
                         },
                         {
@@ -88,8 +101,7 @@
                                 required: true,
                                 title: gettext('Country or Region'),
                                 valueAttribute: 'country',
-                                options: fieldsData.country.options,
-                                persistChanges: true
+                                options: fieldsData['country']['options']
                             })
                         }
                     ]
@@ -102,26 +114,7 @@
                                 model: userAccountModel,
                                 title: gettext('Education Completed'),
                                 valueAttribute: 'level_of_education',
-                                options: fieldsData.level_of_education.options,
-                                persistChanges: true
-                            })
-                        },
-                        {
-                            view: new FieldViews.DropdownFieldView({
-                                model: userAccountModel,
-                                title: gettext('Gender'),
-                                valueAttribute: 'gender',
-                                options: fieldsData.gender.options,
-                                persistChanges: true
-                            })
-                        },
-                        {
-                            view: new FieldViews.DropdownFieldView({
-                                model: userAccountModel,
-                                title: gettext('Year of Birth'),
-                                valueAttribute: 'year_of_birth',
-                                options: fieldsData.year_of_birth.options,
-                                persistChanges: true
+                                options: fieldsData.level_of_education.options
                             })
                         },
                         {
@@ -129,8 +122,7 @@
                                 model: userAccountModel,
                                 title: gettext('Preferred Language'),
                                 valueAttribute: 'language_proficiencies',
-                                options: fieldsData.preferred_language.options,
-                                persistChanges: true
+                                options: fieldsData.preferred_language.options
                             })
                         }
                     ]
@@ -151,7 +143,6 @@
                                 helpMessage: '',
                                 connected: provider.connected,
                                 connectUrl: provider.connect_url,
-                                acceptsLogins: provider.accepts_logins,
                                 disconnectUrl: provider.disconnect_url
                             })
                         };

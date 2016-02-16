@@ -1,7 +1,6 @@
 """
 Test for the registration code status information.
 """
-from course_modes.models import CourseMode
 from courseware.tests.factories import InstructorFactory
 from xmodule.modulestore.tests.factories import CourseFactory
 from django.utils.translation import ugettext as _
@@ -16,22 +15,19 @@ import json
 from student.tests.factories import UserFactory, CourseModeFactory
 from django.core.urlresolvers import reverse
 from django.test.utils import override_settings
-from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
 
 @attr('shard_1')
 @override_settings(REGISTRATION_CODE_LENGTH=8)
-class TestCourseRegistrationCodeStatus(SharedModuleStoreTestCase):
+class TestCourseRegistrationCodeStatus(ModuleStoreTestCase):
     """
     Test registration code status.
     """
-    @classmethod
-    def setUpClass(cls):
-        super(TestCourseRegistrationCodeStatus, cls).setUpClass()
-        cls.course = CourseFactory.create()
 
     def setUp(self):
         super(TestCourseRegistrationCodeStatus, self).setUp()
+        self.course = CourseFactory.create()
         CourseModeFactory.create(course_id=self.course.id, min_price=50)
         self.instructor = InstructorFactory(course_key=self.course.id)
         self.client.login(username=self.instructor.username, password='test')
@@ -117,7 +113,7 @@ class TestCourseRegistrationCodeStatus(SharedModuleStoreTestCase):
                 created_by=self.instructor,
                 invoice=self.sale_invoice,
                 invoice_item=self.invoice_item,
-                mode_slug=CourseMode.DEFAULT_MODE_SLUG
+                mode_slug='honor'
             )
 
         reg_code = CourseRegistrationCode.objects.all()[0]
@@ -248,7 +244,7 @@ class TestCourseRegistrationCodeStatus(SharedModuleStoreTestCase):
                 created_by=self.instructor,
                 invoice=self.sale_invoice,
                 invoice_item=self.invoice_item,
-                mode_slug=CourseMode.DEFAULT_MODE_SLUG,
+                mode_slug='honor',
                 is_valid=False
             )
 
@@ -279,7 +275,7 @@ class TestCourseRegistrationCodeStatus(SharedModuleStoreTestCase):
                 created_by=self.instructor,
                 invoice=self.sale_invoice,
                 invoice_item=self.invoice_item,
-                mode_slug=CourseMode.DEFAULT_MODE_SLUG,
+                mode_slug='honor'
             )
 
         reg_code = CourseRegistrationCode.objects.all()[0]

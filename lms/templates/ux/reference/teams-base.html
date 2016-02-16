@@ -1,5 +1,6 @@
 <%! from django.utils.translation import ugettext as _ %>
 <%! from django.template.defaultfilters import escapejs %>
+<%! from microsite_configuration import page_title_breadcrumbs %>
 <%! from edxnotes.helpers import is_feature_enabled as is_edxnotes_enabled %>
 <%inherit file="/main.html" />
 <%namespace name='static' file='/static_content.html'/>
@@ -14,9 +15,10 @@ Teams | Course name
 <header class="global slim" aria-label="Main" role="banner">
   <div class="wrapper-header nav-container">
     <h1 class="logo" itemscope="" itemtype="http://schema.org/Organization">
-      <a href="/" itemprop="url">
+      <a href="/" title="Home page" itemprop="url">
 
-            <img src="/static/images/edx-theme/edx-logo-77x36.png" alt="Your Platform Name Here Home Page" itemprop="logo" />
+            <img src="/static/images/edx-theme/edx-logo-77x36.png" alt="Your Platform Name Here" title="Your Platform Name Here" itemprop="url" />
+            <span class="sr">Home Page</span>
 
       </a>
     </h1>
@@ -149,15 +151,6 @@ Teams | Course name
         </div>
       </div>
     </header>
-    <div class="wrapper-msg is-incontext urgency-low warning">
-        <div class="msg">
-            <div class="msg-content">
-                <div class="copy">
-                    <p>We couldn't find the team "blah".</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <div class="page-content">
       <nav class="page-content-nav" aria-label="Team">
@@ -166,6 +159,7 @@ Teams | Course name
       </nav>
 
       <div class="page-content-main">
+<!-- may need a form with submit here -->
         <div class="listing-tools">
           <span class="listing-count">1-10 of 24 topics</span> |
           <span class="field listing-sort">
@@ -338,7 +332,7 @@ Teams | Course name
                 </div>
                 <p class="meta-detail project-relation"><span class="icon fa-list"></span> Project 1</p>
                 <p class="meta-detail team-location"><span class="icon fa-globe"></span> North America</p>
-                <p class="meta-detail team-language"><span class="icon fa-comment"></span> English</p>
+                <p class="meta-detail team-language"><span class="icon fa-chat"></span> English</p>
                 <p class="meta-detail team-activity">Last activity: 10 minutes ago</p>
               </div>
             </div>
@@ -366,7 +360,7 @@ Teams | Course name
                 </div>
                 <p class="meta-detail project-relation"><span class="icon fa-list"></span> Project 1</p>
                 <p class="meta-detail team-location"><span class="icon fa-globe"></span> North America</p>
-                <p class="meta-detail team-language"><span class="icon fa-comment"></span> English</p>
+                <p class="meta-detail team-language"><span class="icon fa-chat"></span> English</p>
                 <p class="meta-detail team-activity">Last activity: 10 minutes ago</p>
               </div>
             </div>

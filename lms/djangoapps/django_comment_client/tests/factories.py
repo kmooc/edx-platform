@@ -3,15 +3,11 @@ from django_comment_common.models import Role, Permission
 
 
 class RoleFactory(DjangoModelFactory):
-    class Meta(object):
-        model = Role
-
+    FACTORY_FOR = Role
     name = 'Student'
     course_id = 'edX/toy/2012_Fall'
 
 
 class PermissionFactory(DjangoModelFactory):
-    class Meta(object):
-        model = Permission
-
+    FACTORY_FOR = Permission
     name = 'create_comment'

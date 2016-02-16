@@ -24,7 +24,7 @@ from xblock.field_data import FieldData
 from xmodule.modulestore.inheritance import InheritanceMixin
 
 NOTSET = object()
-ENABLED_OVERRIDE_PROVIDERS_KEY = "courseware.field_overrides.enabled_providers.{course_id}"
+ENABLED_OVERRIDE_PROVIDERS_KEY = "courseware.field_overrides.enabled_providers"
 
 
 def resolve_dotted(name):
@@ -77,6 +77,7 @@ class OverrideFieldData(FieldData):
                  settings.FIELD_OVERRIDE_PROVIDERS))
 
         enabled_providers = cls._providers_for_course(course)
+
         if enabled_providers:
             # TODO: we might not actually want to return here.  Might be better
             # to check for instance.providers after the instance is built. This
@@ -97,16 +98,14 @@ class OverrideFieldData(FieldData):
             course: The course XBlock
         """
         request_cache = RequestCache.get_request_cache()
-        if course is None:
-            cache_key = ENABLED_OVERRIDE_PROVIDERS_KEY.format(course_id='None')
-        else:
-            cache_key = ENABLED_OVERRIDE_PROVIDERS_KEY.format(course_id=unicode(course.id))
-        enabled_providers = request_cache.data.get(cache_key, NOTSET)
+        enabled_providers = request_cache.data.get(
+            ENABLED_OVERRIDE_PROVIDERS_KEY, NOTSET
+        )
         if enabled_providers == NOTSET:
             enabled_providers = tuple(
                 (provider_class for provider_class in cls.provider_classes if provider_class.enabled_for(course))
             )
-            request_cache.data[cache_key] = enabled_providers
+            request_cache.data[ENABLED_OVERRIDE_PROVIDERS_KEY] = enabled_providers
 
         return enabled_providers
 
@@ -228,16 +227,11 @@ class FieldOverrideProvider(object):
     @abstractmethod
     def enabled_for(self, course):  # pragma no cover
         """
-        Return True if this provider should be enabled for a given course,
-        and False otherwise.
+        Return True if this provider should be enabled for a given course
 
-        Concrete implementations are responsible for implementing this method.
+        Return False otherwise
 
-        Arguments:
-          course (CourseModule or None)
-
-        Returns:
-          bool
+        Concrete implementations are responsible for implementing this method
         """
         return False
 

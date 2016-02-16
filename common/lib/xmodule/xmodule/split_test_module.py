@@ -23,8 +23,7 @@ from xblock.fragment import Fragment
 
 log = logging.getLogger('edx.' + __name__)
 
-# Make '_' a no-op so we can scrape strings. Using lambda instead of
-#  `django.utils.translation.ugettext_noop` because Django cannot be imported in this file
+# Make '_' a no-op so we can scrape strings
 _ = lambda text: text
 
 DEFAULT_GROUP_NAME = _(u'Group ID {group_id}')
@@ -376,8 +375,6 @@ class SplitTestDescriptor(SplitTestFields, SequenceDescriptor, StudioEditableDes
 
     mako_template = "widgets/metadata-only-edit.html"
 
-    show_in_read_only_mode = True
-
     child_descriptor = module_attr('child_descriptor')
     log_child_render = module_attr('log_child_render')
     get_content_titles = module_attr('get_content_titles')
@@ -559,7 +556,7 @@ class SplitTestDescriptor(SplitTestFields, SequenceDescriptor, StudioEditableDes
         Returns a StudioValidation object describing the current state of the split_test_module
         (not including superclass validation messages).
         """
-        _ = self.runtime.service(self, "i18n").ugettext
+        _ = self.runtime.service(self, "i18n").ugettext  # pylint: disable=redefined-outer-name
         split_validation = StudioValidation(self.location)
         if self.user_partition_id < 0:
             split_validation.add(

@@ -1,6 +1,3 @@
-"""
-Workflows useful for reporting on runtime characteristics of the system
-"""
 import os
 import signal
 import tempfile

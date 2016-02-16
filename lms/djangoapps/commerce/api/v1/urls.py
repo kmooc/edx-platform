@@ -10,13 +10,8 @@ COURSE_URLS = patterns(
     url(r'^{}/$'.format(settings.COURSE_ID_PATTERN), views.CourseRetrieveUpdateView.as_view(), name='retrieve_update'),
 )
 
-ORDER_URLS = patterns(
-    '',
-    url(r'^(?P<number>[-\w]+)/$', views.OrderView.as_view(), name='detail'),
-)
-
 urlpatterns = patterns(
     '',
     url(r'^courses/', include(COURSE_URLS, namespace='courses')),
-    url(r'^orders/', include(ORDER_URLS, namespace='orders')),
+
 )

@@ -1,27 +1,24 @@
 <%! from django.utils.translation import ugettext as _ %>
 <script type="text/template" id="thread-list-template">
     <div class="forum-nav-header">
-        <button type="button" class="forum-nav-browse" id="forum-nav-browse" aria-haspopup="true">
+        <a href="#" class="forum-nav-browse" aria-haspopup="true">
             ## There is no whitespace between these because the front-end JS code
             ## needs to precisely compute the available width for forum-nav-
             ## browse-current in order to do truncation of topic names.
-            <span class="icon fa fa-reorder" aria-hidden="true"></span>
-            <span class="sr">${_("Discussion topics; currently listing: ")}</span>
-            <span class="forum-nav-browse-current">${_("All Discussions")}</span>
-            <span class="forum-nav-browse-drop-arrow" aria-hidden="true">▾</span>
-        </button>
+            <i class="icon fa fa-reorder"></i><span class="sr">${_("Discussion topics; current selection is: ")}</span><span class="forum-nav-browse-current">${_("All Discussions")}</span><span class="forum-nav-browse-drop-arrow">▾</span>
+        </a>
         <form class="forum-nav-search">
             <div class="forum-nav-search-ff-position-fix">
                 <label>
-                    <span class="sr">${_("Search all posts")}</span>
-                    <input class="forum-nav-search-input" id="forum-nav-search" type="text" placeholder="${_("Search all posts")}">
-                    <span class="icon fa fa-search" aria-hidden="true"></span>
+                    <span class="sr">${_("Search")}</span>
+                    <input class="forum-nav-search-input" type="text" placeholder="${_("Search all posts")}">
+                    <i class="icon fa fa-search"></i>
                 </label>
             </div>
         </form>
     </div>
     <%include file="_filter_dropdown.html" />
-    <div class="forum-nav-thread-list-wrapper" id="sort-filter-wrapper" tabindex="-1">
+    <div class="forum-nav-thread-list-wrapper">
         <div class="forum-nav-refine-bar">
             <label class="forum-nav-filter-main">
                 ## Translators: This labels a filter menu in forum navigation

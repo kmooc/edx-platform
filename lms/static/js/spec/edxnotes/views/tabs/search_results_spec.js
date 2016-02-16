@@ -9,30 +9,30 @@ define([
     'use strict';
     describe('EdxNotes SearchResultsView', function() {
         var notes = [
-                {
-                    created: 'December 11, 2014 at 11:12AM',
-                    updated: 'December 11, 2014 at 11:12AM',
-                    text: 'Third added model',
-                    quote: 'Should be listed first'
-                },
-                {
-                    created: 'December 11, 2014 at 11:11AM',
-                    updated: 'December 11, 2014 at 11:11AM',
-                    text: 'Second added model',
-                    quote: 'Should be listed second'
-                },
-                {
-                    created: 'December 11, 2014 at 11:10AM',
-                    updated: 'December 11, 2014 at 11:10AM',
-                    text: 'First added model',
-                    quote: 'Should be listed third'
-                }
-            ],
-            responseJson = {
-                total: 3,
-                rows: notes
+            {
+                created: 'December 11, 2014 at 11:12AM',
+                updated: 'December 11, 2014 at 11:12AM',
+                text: 'Third added model',
+                quote: 'Should be listed first'
             },
-            getView, submitForm, respondToSearch;
+            {
+                created: 'December 11, 2014 at 11:11AM',
+                updated: 'December 11, 2014 at 11:11AM',
+                text: 'Second added model',
+                quote: 'Should be listed second'
+            },
+            {
+                created: 'December 11, 2014 at 11:10AM',
+                updated: 'December 11, 2014 at 11:10AM',
+                text: 'First added model',
+                quote: 'Should be listed third'
+            }
+        ],
+        responseJson = {
+            total: 3,
+            rows: notes
+        },
+        getView, submitForm;
 
         getView = function (tabsCollection, options) {
             options = _.defaults(options || {}, {
@@ -48,14 +48,6 @@ define([
         submitForm = function (searchBox, text) {
             searchBox.$('.search-notes-input').val(text);
             searchBox.$('.search-notes-submit').click();
-        };
-
-        respondToSearch = function(requests, responseJson) {
-            // First respond to the analytics event
-            AjaxHelpers.respondWithNoContent(requests);
-
-            // Now process the search request
-            AjaxHelpers.respondWithJson(requests, responseJson);
         };
 
         beforeEach(function () {
@@ -79,7 +71,7 @@ define([
                 requests = AjaxHelpers.requests(this);
 
             submitForm(view.searchBox, 'second');
-            respondToSearch(requests, responseJson);
+            AjaxHelpers.respondWithJson(requests, responseJson);
 
             expect(this.tabsCollection).toHaveLength(1);
             expect(this.tabsCollection.at(0).toJSON()).toEqual({
@@ -108,7 +100,7 @@ define([
             expect(this.tabsCollection).toHaveLength(1);
             expect(view.searchResults).toBeNull();
             expect(view.$('.tab-panel')).not.toExist();
-            respondToSearch(requests, responseJson);
+            AjaxHelpers.respondWithJson(requests, responseJson);
             expect(view.$('.ui-loading')).toHaveClass('is-hidden');
         });
 
@@ -117,7 +109,7 @@ define([
                 requests = AjaxHelpers.requests(this);
 
             submitForm(view.searchBox, 'some text');
-            respondToSearch(requests, {
+            AjaxHelpers.respondWithJson(requests, {
                 total: 0,
                 rows: []
             });
@@ -155,7 +147,7 @@ define([
                 requests = AjaxHelpers.requests(this);
 
             submitForm(view.searchBox, 'test_query');
-            respondToSearch(requests, responseJson);
+            AjaxHelpers.respondWithJson(requests, responseJson);
             expect(view.searchResults).toBeDefined();
             this.tabsCollection.at(0).destroy();
             expect(view.searchResults).toBeNull();
@@ -166,11 +158,6 @@ define([
                 requests = AjaxHelpers.requests(this);
 
             submitForm(view.searchBox, 'test error');
-
-            // First respond to the analytics event
-            AjaxHelpers.respondWithNoContent(requests);
-
-            // Now respond to the search with a 500 error
             AjaxHelpers.respondWithError(requests, 500, {error: 'test error message'});
 
             expect(view.$('.wrapper-msg')).not.toHaveClass('is-hidden');
@@ -195,12 +182,12 @@ define([
                 }];
 
             submitForm(view.searchBox, 'test_query');
-            respondToSearch(requests, responseJson);
+            AjaxHelpers.respondWithJson(requests, responseJson);
 
             expect(view.$('.note')).toHaveLength(3);
 
             submitForm(view.searchBox, 'new_test_query');
-            respondToSearch(requests, {
+            AjaxHelpers.respondWithJson(requests, {
                 total: 1,
                 rows: newNotes
             });

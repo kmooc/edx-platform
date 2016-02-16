@@ -21,7 +21,7 @@ from openedx.core.lib.logsettings import get_logger_config
 from util.config_parse import convert_tokens
 import os
 
-from path import Path as path
+from path import path
 from xmodule.modulestore.modulestore_settings import convert_module_store_setting_if_needed
 
 # https://stackoverflow.com/questions/2890146/how-to-force-pyyaml-to-load-strings-as-unicode-objects
@@ -85,6 +85,11 @@ BROKER_HEARTBEAT_CHECKRATE = 2
 # Each worker should only fetch one message at a time
 CELERYD_PREFETCH_MULTIPLIER = 1
 
+# Skip djcelery migrations, since we don't use the database as the broker
+SOUTH_MIGRATION_MODULES = {
+    'djcelery': 'ignore',
+}
+
 # Rename the exchange and queues for each variant
 
 QUEUE_VARIANT = CONFIG_PREFIX.lower()
@@ -115,7 +120,7 @@ ADDL_INSTALLED_APPS = []
 AUTH_USE_CAS = False
 CAS_ATTRIBUTE_CALLBACK = None
 MICROSITE_ROOT_DIR = ''
-CMS_SEGMENT_KEY = None
+SEGMENT_IO = False
 DATADOG = {}
 ADDL_INSTALLED_APPS = []
 LOCAL_LOGLEVEL = 'INFO'
@@ -140,7 +145,7 @@ ENV_TOKENS = convert_tokens(ENV_TOKENS)
 # into settings some dictionary settings
 # need to be merged from common.py
 
-ENV_FEATURES = ENV_TOKENS.get('FEATURES', {})
+ENV_FEATURES = ENV_TOKENS.get('FEATURES', ENV_TOKENS.get('MITX_FEATURES', {}))
 for feature, value in ENV_FEATURES.items():
     FEATURES[feature] = value
 
@@ -230,6 +235,9 @@ vars().update(AUTH_TOKENS)
 # Manipulate imported settings with code
 #
 
+if SEGMENT_IO_KEY:
+    FEATURES['SEGMENT_IO'] = SEGMENT_IO
+
 if AWS_ACCESS_KEY_ID == "":
     AWS_ACCESS_KEY_ID = None
 
@@ -247,7 +255,3 @@ BROKER_URL = "{0}://{1}:{2}@{3}/{4}".format(CELERY_BROKER_TRANSPORT,
                                             CELERY_BROKER_PASSWORD,
                                             CELERY_BROKER_HOSTNAME,
                                             CELERY_BROKER_VHOST)
-
-######################## CUSTOM COURSES for EDX CONNECTOR ######################
-if FEATURES.get('CUSTOM_COURSES_EDX'):
-    INSTALLED_APPS += ('openedx.core.djangoapps.ccxcon',)

@@ -1,15 +1,10 @@
-# encoding: utf-8
-"""
-Admin site configurations for verify_student.
-"""
-
-from config_models.admin import ConfigurationModelAdmin
 from ratelimitbackend import admin
-from lms.djangoapps.verify_student.models import (
-    IcrvStatusEmailsConfiguration,
-    SkippedReverification,
+from config_models.admin import ConfigurationModelAdmin
+from verify_student.models import (
     SoftwareSecurePhotoVerification,
+    InCourseReverificationConfiguration,
     VerificationStatus,
+    SkippedReverification,
 )
 
 
@@ -45,6 +40,10 @@ class VerificationStatusAdmin(admin.ModelAdmin):
             return self.readonly_fields + ('status', 'checkpoint', 'user', 'response', 'error')
         return self.readonly_fields
 
+    def has_delete_permission(self, request, obj=None):
+        """The verification status table is append-only. """
+        return False
+
 
 class SkippedReverificationAdmin(admin.ModelAdmin):
     """Admin for the SkippedReverification table. """
@@ -59,6 +58,6 @@ class SkippedReverificationAdmin(admin.ModelAdmin):
 
 
 admin.site.register(SoftwareSecurePhotoVerification, SoftwareSecurePhotoVerificationAdmin)
+admin.site.register(InCourseReverificationConfiguration, ConfigurationModelAdmin)
 admin.site.register(SkippedReverification, SkippedReverificationAdmin)
 admin.site.register(VerificationStatus, VerificationStatusAdmin)
-admin.site.register(IcrvStatusEmailsConfiguration, ConfigurationModelAdmin)

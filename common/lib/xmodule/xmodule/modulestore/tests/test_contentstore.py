@@ -42,13 +42,13 @@ class TestContentstore(unittest.TestCase):
         Restores deprecated values
         """
         if cls.asset_deprecated is not None:
-            AssetLocator.deprecated = cls.asset_deprecated
+            setattr(AssetLocator, 'deprecated', cls.asset_deprecated)
         else:
-            del AssetLocator.deprecated
+            delattr(AssetLocator, 'deprecated')
         if cls.ssck_deprecated is not None:
-            CourseLocator.deprecated = cls.ssck_deprecated
+            setattr(CourseLocator, 'deprecated', cls.ssck_deprecated)
         else:
-            del CourseLocator.deprecated
+            delattr(CourseLocator, 'deprecated')
         return super(TestContentstore, cls).tearDownClass()
 
     def set_up_assets(self, deprecated):
@@ -60,8 +60,8 @@ class TestContentstore(unittest.TestCase):
         self.contentstore = MongoContentStore(HOST, DB, port=PORT)
         self.addCleanup(self.contentstore._drop_database)  # pylint: disable=protected-access
 
-        AssetLocator.deprecated = deprecated
-        CourseLocator.deprecated = deprecated
+        setattr(AssetLocator, 'deprecated', deprecated)
+        setattr(CourseLocator, 'deprecated', deprecated)
 
         self.course1_key = CourseLocator('test', 'asset_test', '2014_07')
         self.course2_key = CourseLocator('test', 'asset_test2', '2014_07')
@@ -130,18 +130,18 @@ class TestContentstore(unittest.TestCase):
         Test export
         """
         self.set_up_assets(deprecated)
-        root_dir = path.Path(mkdtemp())
+        root_dir = path.path(mkdtemp())
         try:
             self.contentstore.export_all_for_course(
                 self.course1_key, root_dir,
-                path.Path(root_dir / "policy.json"),
+                path.path(root_dir / "policy.json"),
             )
             for filename in self.course1_files:
-                filepath = path.Path(root_dir / filename)
+                filepath = path.path(root_dir / filename)
                 self.assertTrue(filepath.isfile(), "{} is not a file".format(filepath))
             for filename in self.course2_files:
                 if filename not in self.course1_files:
-                    filepath = path.Path(root_dir / filename)
+                    filepath = path.path(root_dir / filename)
                     self.assertFalse(filepath.isfile(), "{} is unexpected exported a file".format(filepath))
         finally:
             shutil.rmtree(root_dir)

@@ -1,7 +1,4 @@
-"""
-Base urls for the django_comment_client.
-"""
-from django.conf.urls import url, patterns
+from django.conf.urls.defaults import url, patterns
 
 urlpatterns = patterns(
     'django_comment_client.base.views',

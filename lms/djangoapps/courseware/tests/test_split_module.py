@@ -119,7 +119,7 @@ class SplitTestBase(ModuleStoreTestCase):
         content = resp.content
 
         # Assert we see the proper icon in the top display
-        self.assertIn('<a class="{} inactive progress-0 nav-item"'.format(self.ICON_CLASSES[user_tag]), content)
+        self.assertIn('<a class="{} inactive progress-0"'.format(self.ICON_CLASSES[user_tag]), content)
         # And proper tooltips
         for tooltip in self.TOOLTIPS[user_tag]:
             self.assertIn(tooltip, content)
@@ -173,6 +173,7 @@ class TestVertSplitTestVert(SplitTestBase):
             category="vertical",
             display_name="Split test vertical",
         )
+        # pylint: disable=protected-access
         c0_url = self.course.id.make_usage_key("vertical", "split_test_cond0")
         c1_url = self.course.id.make_usage_key("vertical", "split_test_cond1")
 
@@ -238,6 +239,7 @@ class TestSplitTestVert(SplitTestBase):
 
         # split_test cond 0 = vert <- {video, problem}
         # split_test cond 1 = vert <- {video, html}
+        # pylint: disable=protected-access
         c0_url = self.course.id.make_usage_key("vertical", "split_test_cond0")
         c1_url = self.course.id.make_usage_key("vertical", "split_test_cond1")
 

@@ -1,6 +1,5 @@
 define(["js/views/baseview", "codemirror", "js/models/course_update",
-        "common/js/components/views/feedback_prompt", "common/js/components/views/feedback_notification",
-        "js/views/course_info_helper", "js/utils/modal"],
+    "js/views/feedback_prompt", "js/views/feedback_notification", "js/views/course_info_helper", "js/utils/modal"],
     function(BaseView, CodeMirror, CourseUpdateModel, PromptView, NotificationView, CourseInfoHelper, ModalUtils) {
 
     var CourseInfoUpdateView = BaseView.extend({
@@ -82,9 +81,11 @@ define(["js/views/baseview", "codemirror", "js/models/course_update",
         onSave: function(event) {
             event.preventDefault();
             var targetModel = this.eventModel(event);
+            var value = this.$codeMirror.getValue();
+            value = value.replace(/<script/gi,"<noscript").replace(/\/script/gi,"\/noscript");
             targetModel.set({
                 date : this.dateEntry(event).val(),
-                content : this.$codeMirror.getValue(),
+                content : value,
                 push_notification_selected : this.push_notification_selected(event)
             });
             // push change to display, hide the editor, submit the change
@@ -105,8 +106,7 @@ define(["js/views/baseview", "codemirror", "js/models/course_update",
 
             analytics.track('Saved Course Update', {
                 'course': course_location_analytics,
-                'date': this.dateEntry(event).val(),
-                'push_notification_selected': this.push_notification_selected(event)
+                'date': this.dateEntry(event).val()
             });
         },
 
@@ -128,6 +128,9 @@ define(["js/views/baseview", "codemirror", "js/models/course_update",
 
             $(this.editor(event)).show();
             var $textArea = this.$currentPost.find(".new-update-content").first();
+
+            console.log("$textArea = " + $textArea);
+
             var targetModel = this.eventModel(event);
             this.$codeMirror = CourseInfoHelper.editWithCodeMirror(
                 targetModel, 'content', self.options['base_asset_url'], $textArea.get(0));
@@ -135,7 +138,7 @@ define(["js/views/baseview", "codemirror", "js/models/course_update",
             // Variable stored for unit test.
             this.$modalCover = ModalUtils.showModalCover(false,
                 function() {
-                    self.closeEditor(false);
+                    self.closeEditor(false)
                 }
             );
         },
@@ -212,9 +215,8 @@ define(["js/views/baseview", "codemirror", "js/models/course_update",
 
                 // hide the push notification checkbox for subsequent edits to the Post
                 var push_notification_ele = this.$currentPost.find(".new-update-push-notification");
-                if (push_notification_ele) {
+                if (push_notification_ele)
                     push_notification_ele.hide();
-                }
             }
 
             ModalUtils.hideModalCover(this.$modalCover);
@@ -233,16 +235,12 @@ define(["js/views/baseview", "codemirror", "js/models/course_update",
 
         editor: function(event) {
             var li = $(event.currentTarget).closest("li");
-            if (li) {
-                return $(li).find("form").first();
-            }
+            if (li) return $(li).find("form").first();
         },
 
         dateEntry: function(event) {
             var li = $(event.currentTarget).closest("li");
-            if (li) {
-                return $(li).find(".date").first();
-            }
+            if (li) return $(li).find(".date").first();
         },
 
         push_notification_selected: function(event) {
@@ -255,6 +253,7 @@ define(["js/views/baseview", "codemirror", "js/models/course_update",
                 }
             }
         }
+
     });
 
     return CourseInfoUpdateView;

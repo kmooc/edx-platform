@@ -1,7 +1,7 @@
 (function (undefined) {
     'use strict';
     describe('VideoPlayer Events plugin', function () {
-        var state, oldOTBD, Logger = window.Logger;
+        var state, oldOTBD;
 
         beforeEach(function () {
             oldOTBD = window.onTouchBasedDevice;
@@ -32,21 +32,13 @@
             });
         });
 
-        it('can emit "play_video" event when emitPlayVideoEvent is true', function () {
-            state.videoEventsPlugin.emitPlayVideoEvent = true;
+        it('can emit "play_video" event', function () {
             state.el.trigger('play');
             expect(Logger.log).toHaveBeenCalledWith('play_video', {
                 id: 'id',
                 code: 'html5',
                 currentTime: 10
             });
-            expect(state.videoEventsPlugin.emitPlayVideoEvent).toBeFalsy();
-        });
-
-        it('can not emit "play_video" event when emitPlayVideoEvent is false', function () {
-            state.videoEventsPlugin.emitPlayVideoEvent = false;
-            state.el.trigger('play');
-            expect(Logger.log).not.toHaveBeenCalled();
         });
 
         it('can emit "pause_video" event', function () {
@@ -56,7 +48,6 @@
                 code: 'html5',
                 currentTime: 10
             });
-            expect(state.videoEventsPlugin.emitPlayVideoEvent).toBeTruthy();
         });
 
         it('can emit "speed_change_video" event', function () {
@@ -88,7 +79,6 @@
                 code: 'html5',
                 currentTime: 10
             });
-            expect(state.videoEventsPlugin.emitPlayVideoEvent).toBeTruthy();
 
             Logger.log.reset();
             state.el.trigger('stop');
@@ -97,7 +87,6 @@
                 code: 'html5',
                 currentTime: 10
             });
-            expect(state.videoEventsPlugin.emitPlayVideoEvent).toBeTruthy();
         });
 
         it('can emit "skip_video" event', function () {

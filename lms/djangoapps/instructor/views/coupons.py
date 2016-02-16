@@ -47,7 +47,7 @@ def remove_coupon(request, course_id):  # pylint: disable=unused-argument
 
 @require_POST
 @login_required
-def add_coupon(request, course_id):
+def add_coupon(request, course_id):  # pylint: disable=unused-argument
     """
     add coupon in the Coupons Table
     """

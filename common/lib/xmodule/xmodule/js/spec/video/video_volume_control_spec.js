@@ -3,12 +3,6 @@
 describe('VideoVolumeControl', function () {
     var state, oldOTBD, volumeControl;
 
-    var KEY = $.ui.keyCode,
-
-    keyPressEvent = function(key) {
-        return $.Event('keydown', { keyCode: key });
-    };
-
     beforeEach(function () {
         oldOTBD = window.onTouchBasedDevice;
         window.onTouchBasedDevice = jasmine.createSpy('onTouchBasedDevice')
@@ -62,20 +56,24 @@ describe('VideoVolumeControl', function () {
             var liveRegion = $('.video-live-region');
 
             expect(liveRegion).toHaveAttrs({
-                'aria-live': 'polite'
+                'role': 'status',
+                'aria-live': 'polite',
+                'aria-atomic': 'false'
             });
         });
 
         it('add ARIA attributes to volume control', function () {
-            var button = $('.volume .control');
+            var button = $('.volume > a');
 
             expect(button).toHaveAttrs({
+                'role': 'button',
+                'title': 'Volume',
                 'aria-disabled': 'false'
             });
         });
 
         it('bind the volume control', function () {
-            var button = $('.volume .control');
+            var button = $('.volume > a');
 
             expect(button).toHandle('keydown');
             expect(button).toHandle('mousedown');
@@ -187,19 +185,16 @@ describe('VideoVolumeControl', function () {
     });
 
     describe('increaseVolume', function () {
-
         beforeEach(function () {
             state = jasmine.initializePlayer();
             volumeControl = state.videoVolumeControl;
         });
 
         it('volume is increased correctly', function () {
-            var button = $('.volume .control');
             volumeControl.volume = 60;
-
-            // adjust the volume
-            button.focus();
-            button.trigger(keyPressEvent(KEY.UP));
+            state.el.trigger(jQuery.Event("keydown", {
+                keyCode: $.ui.keyCode.UP
+            }));
             expect(volumeControl.volume).toEqual(80);
         });
 
@@ -211,19 +206,16 @@ describe('VideoVolumeControl', function () {
     });
 
     describe('decreaseVolume', function () {
-
         beforeEach(function () {
             state = jasmine.initializePlayer();
             volumeControl = state.videoVolumeControl;
         });
 
         it('volume is decreased correctly', function () {
-            var button = $('.volume .control');
             volumeControl.volume = 60;
-
-            // adjust the volume
-            button.focus();
-            button.trigger(keyPressEvent(KEY.DOWN));
+            state.el.trigger(jQuery.Event("keydown", {
+                keyCode: $.ui.keyCode.DOWN
+            }));
             expect(volumeControl.volume).toEqual(40);
         });
 
@@ -282,21 +274,21 @@ describe('VideoVolumeControl', function () {
 
         it('nothing happens if ALT+keyUp are pushed down', function () {
             assertVolumeIsNotChanged({
-                keyCode: KEY.UP,
+                keyCode: $.ui.keyCode.UP,
                 altKey: true
             });
         });
 
         it('nothing happens if SHIFT+keyUp are pushed down', function () {
             assertVolumeIsNotChanged({
-                keyCode: KEY.UP,
+                keyCode: $.ui.keyCode.UP,
                 shiftKey: true
             });
         });
 
         it('nothing happens if SHIFT+keyDown are pushed down', function () {
             assertVolumeIsNotChanged({
-                keyCode: KEY.DOWN,
+                keyCode: $.ui.keyCode.DOWN,
                 shiftKey: true
             });
         });
@@ -310,8 +302,8 @@ describe('VideoVolumeControl', function () {
 
         it('nothing happens if ALT+ENTER are pushed down', function () {
             var isMuted = volumeControl.getMuteStatus();
-            $('.volume .control').trigger(jQuery.Event("keydown", {
-                keyCode: KEY.ENTER,
+            $('.volume > a').trigger(jQuery.Event("keydown", {
+                keyCode: $.ui.keyCode.ENTER,
                 altKey: true
             }));
             expect(volumeControl.getMuteStatus()).toEqual(isMuted);

@@ -1,50 +1,51 @@
-"""
-MongoDB/GridFS-level code for the contentstore.
-"""
-import os
-import json
 import pymongo
 import gridfs
 from gridfs.errors import NoFile
-from fs.osfs import OSFS
-from bson.son import SON
 
-from mongodb_proxy import autoretry_read
-from opaque_keys.edx.keys import AssetKey
 from xmodule.contentstore.content import XASSET_LOCATION_TAG
-from xmodule.exceptions import NotFoundError
-from xmodule.modulestore.django import ASSET_IGNORE_REGEX
-from xmodule.util.misc import escape_invalid_characters
-from xmodule.mongo_utils import connect_to_mongodb, create_collection_index
+
+import logging
+
 from .content import StaticContent, ContentStore, StaticContentStream
+from xmodule.exceptions import NotFoundError
+from fs.osfs import OSFS
+import os
+import json
+from bson.son import SON
+from opaque_keys.edx.keys import AssetKey
+from xmodule.modulestore.django import ASSET_IGNORE_REGEX
 
 
 class MongoContentStore(ContentStore):
-    """
-    MongoDB-backed ContentStore.
-    """
-    # pylint: disable=unused-argument, bad-continuation
-    def __init__(
-        self, host, db,
-        port=27017, tz_aware=True, user=None, password=None, bucket='fs', collection=None, **kwargs
-    ):
+
+    # pylint: disable=unused-argument
+    def __init__(self, host, db, port=27017, user=None, password=None, bucket='fs', collection=None, **kwargs):
         """
         Establish the connection with the mongo backend and connect to the collections
 
         :param collection: ignores but provided for consistency w/ other doc_store_config patterns
         """
-        # GridFS will throw an exception if the Database is wrapped in a MongoProxy. So don't wrap it.
-        # The appropriate methods below are marked as autoretry_read - those methods will handle
-        # the AutoReconnect errors.
-        proxy = False
-        mongo_db = connect_to_mongodb(
-            db, host,
-            port=port, tz_aware=tz_aware, user=user, password=password, proxy=proxy, **kwargs
+        logging.debug('Using MongoDB for static content serving at host={0} port={1} db={2}'.format(host, port, db))
+
+        # Remove the replicaSet parameter.
+        kwargs.pop('replicaSet', None)
+
+        _db = pymongo.database.Database(
+            pymongo.MongoClient(
+                host=host,
+                port=port,
+                document_class=dict,
+                **kwargs
+            ),
+            db
         )
 
-        self.fs = gridfs.GridFS(mongo_db, bucket)  # pylint: disable=invalid-name
+        if user is not None and password is not None:
+            _db.authenticate(user, password)
 
-        self.fs_files = mongo_db[bucket + ".files"]  # the underlying collection GridFS uses
+        self.fs = gridfs.GridFS(_db, bucket)
+
+        self.fs_files = _db[bucket + ".files"]  # the underlying collection GridFS uses
 
     def close_connections(self):
         """
@@ -83,16 +84,28 @@ class MongoContentStore(ContentStore):
 
         return content
 
+    def save_cdn(self, content):
+        content_id, content_son = self.asset_db_key(content.location)
+        self.delete(content_id)
+        with self.fs.new_file(_id=content_id,
+                              filename=unicode(content.location),
+                              displayname=content.name,
+                              content_son=content_son,
+                              cdn_url=content.cdn_url,
+                              content_type=content.content_type,
+                              thumbnail_location=None,
+                              locked=getattr(content, 'locked', False)
+                              ) as fp:
+            print("mongodb insert ok")
+
+        return content
+
     def delete(self, location_or_id):
-        """
-        Delete an asset.
-        """
         if isinstance(location_or_id, AssetKey):
             location_or_id, _ = self.asset_db_key(location_or_id)
         # Deletes of non-existent files are considered successful
         self.fs.delete(location_or_id)
 
-    @autoretry_read()
     def find(self, location, throw_on_not_found=True, as_stream=False):
         content_id, __ = self.asset_db_key(location)
 
@@ -131,22 +144,33 @@ class MongoContentStore(ContentStore):
             else:
                 return None
 
+    def find_cdn(self, location, throw_on_not_found=True, as_stream=False):
+        content_id, __ = self.asset_db_key(location)
+
+        try:
+            with self.fs.get(content_id) as fp:
+                return StaticContent(
+                        content_id, fp.displayname, fp.content_type, fp.read(), last_modified_at=fp.uploadDate,
+                )
+        except NoFile:
+            if throw_on_not_found:
+                raise NotFoundError(content_id)
+            else:
+                return None
+
+
     def export(self, location, output_directory):
         content = self.find(location)
 
-        filename = content.name
         if content.import_path is not None:
             output_directory = output_directory + '/' + os.path.dirname(content.import_path)
 
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
 
-        # Escape invalid char from filename.
-        export_name = escape_invalid_characters(name=filename, invalid_char_list=['/', '\\'])
-
         disk_fs = OSFS(output_directory)
 
-        with disk_fs.open(export_name, 'wb') as asset_file:
+        with disk_fs.open(content.name, 'wb') as asset_file:
             asset_file.write(content.data)
 
     def export_all_for_course(self, course_key, output_directory, assets_policy_file):
@@ -188,6 +212,11 @@ class MongoContentStore(ContentStore):
             course_key, start=start, maxresults=maxresults, get_thumbnails=False, sort=sort, filter_params=filter_params
         )
 
+    def get_all_cdn_content_for_course(self, course_key, start=0, maxresults=-1, sort=None, filter_params=None):
+        return self._get_all_cdn_content_for_course(
+            course_key, start=start, maxresults=maxresults, get_thumbnails=False, sort=sort, filter_params=filter_params
+        )
+
     def remove_redundant_content_for_courses(self):
         """
         Finds and removes all redundant files (Mac OS metadata files with filename ".DS_Store"
@@ -208,7 +237,6 @@ class MongoContentStore(ContentStore):
             self.fs_files.remove(query)
         return assets_to_delete
 
-    @autoretry_read()
     def _get_all_content_for_course(self,
                                     course_key,
                                     get_thumbnails=False,
@@ -227,6 +255,44 @@ class MongoContentStore(ContentStore):
             md5: An md5 hash of the asset content
         '''
         query = query_for_course(course_key, "asset" if not get_thumbnails else "thumbnail")
+        find_args = {"sort": sort}
+        if maxresults > 0:
+            find_args.update({
+                "skip": start,
+                "limit": maxresults,
+            })
+        if filter_params:
+            query.update(filter_params)
+
+        items = self.fs_files.find(query, **find_args)
+        count = items.count()
+        assets = list(items)
+
+        # We're constructing the asset key immediately after retrieval from the database so that
+        # callers are insulated from knowing how our identifiers are stored.
+        for asset in assets:
+            asset_id = asset.get('content_son', asset['_id'])
+            asset['asset_key'] = course_key.make_asset_key(asset_id['category'], asset_id['name'])
+        return assets, count
+
+    def _get_all_cdn_content_for_course(self,
+                                        course_key,
+                                        get_thumbnails=False,
+                                        start=0,
+                                        maxresults=-1,
+                                        sort=None,
+                                        filter_params=None):
+        '''
+        Returns a list of all static assets for a course. The return format is a list of asset data dictionary elements.
+
+        The asset data dictionaries have the following keys:
+            asset_key (:class:`opaque_keys.edx.AssetKey`): The key of the asset
+            displayname: The human-readable name of the asset
+            uploadDate (datetime.datetime): The date and time that the file was uploadDate
+            contentType: The mimetype string of the asset
+            md5: An md5 hash of the asset content
+        '''
+        query = query_for_course(course_key, "cdn" if not get_thumbnails else "thumbnail")
         find_args = {"sort": sort}
         if maxresults > 0:
             find_args.update({
@@ -291,7 +357,6 @@ class MongoContentStore(ContentStore):
         if not result.get('updatedExisting', True):
             raise NotFoundError(asset_db_key)
 
-    @autoretry_read()
     def get_attrs(self, location):
         """
         Gets all of the attributes associated with the given asset. Note, returns even built in attrs
@@ -397,88 +462,33 @@ class MongoContentStore(ContentStore):
         return dbkey
 
     def ensure_indexes(self):
+
         # Index needed thru 'category' by `_get_all_content_for_course` and others. That query also takes a sort
         # which can be `uploadDate`, `display_name`,
-        create_collection_index(
-            self.fs_files,
-            [
-                ('_id.tag', pymongo.ASCENDING),
-                ('_id.org', pymongo.ASCENDING),
-                ('_id.course', pymongo.ASCENDING),
-                ('_id.category', pymongo.ASCENDING)
-            ],
-            sparse=True,
-            background=True
+
+        self.fs_files.create_index(
+            [('_id.org', pymongo.ASCENDING), ('_id.course', pymongo.ASCENDING), ('_id.name', pymongo.ASCENDING)],
+            sparse=True
         )
-        create_collection_index(
-            self.fs_files,
-            [
-                ('content_son.org', pymongo.ASCENDING),
-                ('content_son.course', pymongo.ASCENDING),
-                ('uploadDate', pymongo.DESCENDING)
-            ],
-            sparse=True,
-            background=True
+        self.fs_files.create_index(
+            [('content_son.org', pymongo.ASCENDING), ('content_son.course', pymongo.ASCENDING), ('content_son.name', pymongo.ASCENDING)],
+            sparse=True
         )
-        create_collection_index(
-            self.fs_files,
-            [
-                ('_id.org', pymongo.ASCENDING),
-                ('_id.course', pymongo.ASCENDING),
-                ('_id.name', pymongo.ASCENDING)
-            ],
-            sparse=True,
-            background=True
+        self.fs_files.create_index(
+            [('_id.org', pymongo.ASCENDING), ('_id.course', pymongo.ASCENDING), ('uploadDate', pymongo.ASCENDING)],
+            sparse=True
         )
-        create_collection_index(
-            self.fs_files,
-            [
-                ('content_son.org', pymongo.ASCENDING),
-                ('content_son.course', pymongo.ASCENDING),
-                ('content_son.name', pymongo.ASCENDING)
-            ],
-            sparse=True,
-            background=True
+        self.fs_files.create_index(
+            [('_id.org', pymongo.ASCENDING), ('_id.course', pymongo.ASCENDING), ('display_name', pymongo.ASCENDING)],
+            sparse=True
         )
-        create_collection_index(
-            self.fs_files,
-            [
-                ('_id.org', pymongo.ASCENDING),
-                ('_id.course', pymongo.ASCENDING),
-                ('uploadDate', pymongo.ASCENDING)
-            ],
-            sparse=True,
-            background=True
+        self.fs_files.create_index(
+            [('content_son.org', pymongo.ASCENDING), ('content_son.course', pymongo.ASCENDING), ('uploadDate', pymongo.ASCENDING)],
+            sparse=True
         )
-        create_collection_index(
-            self.fs_files,
-            [
-                ('_id.org', pymongo.ASCENDING),
-                ('_id.course', pymongo.ASCENDING),
-                ('display_name', pymongo.ASCENDING)
-            ],
-            sparse=True,
-            background=True
-        )
-        create_collection_index(
-            self.fs_files,
-            [
-                ('content_son.org', pymongo.ASCENDING),
-                ('content_son.course', pymongo.ASCENDING),
-                ('uploadDate', pymongo.ASCENDING)
-            ],
-            sparse=True,
-            background=True
-        )
-        create_collection_index(
-            self.fs_files,
-            [
-                ('content_son.org', pymongo.ASCENDING),
-                ('content_son.course', pymongo.ASCENDING),
-                ('display_name', pymongo.ASCENDING)
-            ],
-            sparse=True,
-            background=True
+        self.fs_files.create_index(
+            [('content_son.org', pymongo.ASCENDING), ('content_son.course', pymongo.ASCENDING), ('display_name', pymongo.ASCENDING)],
+            sparse=True
         )
 
 

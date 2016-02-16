@@ -13,11 +13,9 @@ define([], function () {
     var withData = function (data, func) {
         for (var name in data) {
             if (data.hasOwnProperty(name)) {
-                (function (name) {
-                    it(name, function () {
-                        func.apply(this, data[name]);
-                    });
-                })(name);
+                it(name, function () {
+                    func.apply(this, data[name]);
+                });
             }
         }
     };
@@ -33,14 +31,12 @@ define([], function () {
     var withConfiguration = function (config, setup, test) {
         for (var name in config) {
             if (config.hasOwnProperty(name)) {
-                (function (name) {
-                    describe(name, function () {
-                        beforeEach(function () {
-                            setup.apply(this, config[name]);
-                        });
-                        test();
+                describe(name, function () {
+                    beforeEach(function () {
+                        setup.apply(this, config[name]);
                     });
-                })(name);
+                    test();
+                });
             }
         }
     };

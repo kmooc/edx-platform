@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-{% load sekizai_tags i18n microsite pipeline optional_include %}
+{% load compressed %}
+{% load sekizai_tags i18n microsite %}
 {% load url from future %}
+{% load staticfiles %}
 <html lang="{{LANGUAGE_CODE}}">
 <head>
   <meta charset="UTF-8">
@@ -8,40 +10,53 @@
 
  <link rel="icon" type="image/x-icon" href="{% favicon_path %}" />
 
-  {% stylesheet 'style-vendor' %}
-  {% stylesheet 'style-main' %}
-  {% stylesheet 'style-course-vendor' %}
-  {% stylesheet 'style-course' %}
+  {% compressed_css 'style-vendor' %}
+  {% compressed_css 'style-main' %}
+  {% compressed_css 'style-course-vendor' %}
+  {% compressed_css 'style-course' %}
 
   {% block main_vendor_js %}
-  {% javascript 'main_vendor' %}
+  {% compressed_js 'main_vendor' %}
   {% endblock %}
   {% block headextra %}{% endblock %}
   {% render_block "css" %}
 
-  {% optional_include "head-extra.html"|microsite_template_path %}
+  {% microsite_css_overrides_file %}
 
   <meta name="path_prefix" content="{{EDX_ROOT_URL}}">
+    <link rel="stylesheet" type="text/css" href="/static/css/layout.css" />
+    <script type="text/javascript" src="/static/js/custom.js"></script>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-68431198-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
 </head>
 
 <body class="{% block bodyclass %}{% endblock %} lang_{{LANGUAGE_CODE}}">
   <div class="window-wrap" dir="${static.dir_rtl()}">
     <a class="nav-skip" href="{% block nav_skip %}#content{% endblock %}">{% trans "Skip to main content" %}</a>
     {% with course=request.course %}
-      {% include "header.html"|microsite_template_path %}
+      {% if IS_EDX_DOMAIN %}
+        {% include "navigation-edx.html" %}
+      {% else %}
+        {% include "navigation.html" %}
+      {% endif %}
     {% endwith %}
     <div class="content-wrapper" id="content">
       {% block body %}{% endblock %}
       {% block bodyextra %}{% endblock %}
     </div>
-    {% with course=request.course %}
-      {% include "footer.html"|microsite_template_path %}
-    {% endwith %}
-
+      {% include "theme-footer.html" %}
   </div>
 
-    {% javascript 'application' %}
-    {% javascript 'module-js' %}
+    {% compressed_js 'application' %}
+    {% compressed_js 'module-js' %}
 
     {% render_block "js" %}
 </body>

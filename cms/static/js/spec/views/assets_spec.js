@@ -1,5 +1,5 @@
 define([ "jquery", "common/js/spec_helpers/ajax_helpers", "URI", "js/views/assets",
-         "js/collections/asset", "common/js/spec_helpers/view_helpers"],
+         "js/collections/asset", "js/spec_helpers/view_helpers"],
     function ($, AjaxHelpers, URI, AssetsView, AssetCollection, ViewHelpers) {
 
         describe("Assets", function() {
@@ -119,12 +119,13 @@ define([ "jquery", "common/js/spec_helpers/ajax_helpers", "URI", "js/views/asset
             };
 
             var respondWithMockAssets = function(requests) {
-                var request = AjaxHelpers.currentRequest(requests);
+                var requestIndex = requests.length - 1;
+                var request = requests[requestIndex];
                 var url = new URI(request.url);
                 var queryParameters = url.query(true); // Returns an object with each query parameter stored as a value
                 var asset_type = queryParameters.asset_type;
                 var response = asset_type !== '' ? mockExampleFilteredAssetsResponse : mockExampleAssetsResponse;
-                AjaxHelpers.respondWithJson(requests, response);
+                AjaxHelpers.respondWithJson(requests, response, requestIndex);
             };
 
             var event = {};

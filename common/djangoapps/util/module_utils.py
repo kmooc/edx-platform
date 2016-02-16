@@ -3,7 +3,7 @@ Utility library containing operations used/shared by multiple courseware modules
 """
 
 
-def yield_dynamic_descriptor_descendants(descriptor, user_id, module_creator=None):  # pylint: disable=invalid-name
+def yield_dynamic_descriptor_descendants(descriptor, user_id, module_creator):  # pylint: disable=invalid-name
     """
     This returns all of the descendants of a descriptor. If the descriptor
     has dynamic children, the module will be created using module_creator
@@ -23,13 +23,12 @@ def get_dynamic_descriptor_children(descriptor, user_id, module_creator=None, us
     """
     module_children = []
     if descriptor.has_dynamic_children():
-        module = None
+        # do not rebind the module if it's already bound to a user.
         if descriptor.scope_ids.user_id and user_id == descriptor.scope_ids.user_id:
-            # do not rebind the module if it's already bound to a user.
             module = descriptor
-        elif module_creator:
+        else:
             module = module_creator(descriptor)
-        if module:
+        if module is not None:
             module_children = module.get_child_descriptors()
     else:
         module_children = descriptor.get_children(usage_key_filter)

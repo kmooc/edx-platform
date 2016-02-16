@@ -2,7 +2,6 @@
 Python tests for the Survey models
 """
 
-import ddt
 from collections import OrderedDict
 
 from django.test import TestCase
@@ -11,10 +10,9 @@ from django.contrib.auth.models import User
 
 from survey.exceptions import SurveyFormNotFound, SurveyFormNameAlreadyExists
 from django.core.exceptions import ValidationError
-from survey.models import SurveyForm, SurveyAnswer
+from survey.models import SurveyForm
 
 
-@ddt.ddt
 class SurveyModelsTests(TestCase):
     """
     All tests for the Survey models.py file
@@ -34,20 +32,10 @@ class SurveyModelsTests(TestCase):
         self.test_survey_name = 'TestForm'
         self.test_form = '<li><input name="field1" /></li><li><input name="field2" /></li><li><select name="ddl"><option>1</option></select></li>'
         self.test_form_update = '<input name="field1" />'
-        self.course_id = 'foo/bar/baz'
 
         self.student_answers = OrderedDict({
             'field1': 'value1',
             'field2': 'value2',
-        })
-
-        self.student_answers_update = OrderedDict({
-            'field1': 'value1-updated',
-            'field2': 'value2-updated',
-        })
-
-        self.student_answers_update2 = OrderedDict({
-            'field1': 'value1-updated2',
         })
 
         self.student2_answers = OrderedDict({
@@ -154,8 +142,7 @@ class SurveyModelsTests(TestCase):
         self.assertFalse(survey.has_user_answered_survey(self.student))
         self.assertEquals(len(survey.get_answers()), 0)
 
-    @ddt.data(None, 'foo/bar/baz')
-    def test_single_user_answers(self, course_id):
+    def test_single_user_answers(self):
         """
         Create a new survey and add answers to it
         """
@@ -163,7 +150,7 @@ class SurveyModelsTests(TestCase):
         survey = self._create_test_survey()
         self.assertIsNotNone(survey)
 
-        survey.save_user_answers(self.student, self.student_answers, course_id)
+        survey.save_user_answers(self.student, self.student_answers)
 
         self.assertTrue(survey.has_user_answered_survey(self.student))
 
@@ -177,19 +164,6 @@ class SurveyModelsTests(TestCase):
         self.assertTrue(self.student.id in answers)
         self.assertEquals(all_answers[self.student.id], self.student_answers)
 
-        # check that the course_id was set
-
-        answer_objs = SurveyAnswer.objects.filter(
-            user=self.student,
-            form=survey
-        )
-
-        for answer_obj in answer_objs:
-            if course_id:
-                self.assertEquals(unicode(answer_obj.course_key), course_id)
-            else:
-                self.assertIsNone(answer_obj.course_key)
-
     def test_multiple_user_answers(self):
         """
         Create a new survey and add answers to it
@@ -198,8 +172,8 @@ class SurveyModelsTests(TestCase):
         survey = self._create_test_survey()
         self.assertIsNotNone(survey)
 
-        survey.save_user_answers(self.student, self.student_answers, self.course_id)
-        survey.save_user_answers(self.student2, self.student2_answers, self.course_id)
+        survey.save_user_answers(self.student, self.student_answers)
+        survey.save_user_answers(self.student2, self.student2_answers)
 
         self.assertTrue(survey.has_user_answered_survey(self.student))
 
@@ -213,43 +187,12 @@ class SurveyModelsTests(TestCase):
         answers = survey.get_answers(self.student)
         self.assertEquals(len(answers.keys()), 1)
         self.assertTrue(self.student.id in answers)
-        self.assertEquals(answers[self.student.id], self.student_answers)
+        self.assertEquals(all_answers[self.student.id], self.student_answers)
 
         answers = survey.get_answers(self.student2)
         self.assertEquals(len(answers.keys()), 1)
         self.assertTrue(self.student2.id in answers)
-        self.assertEquals(answers[self.student2.id], self.student2_answers)
-
-    def test_update_answers(self):
-        """
-        Make sure the update case works
-        """
-
-        survey = self._create_test_survey()
-        self.assertIsNotNone(survey)
-
-        survey.save_user_answers(self.student, self.student_answers, self.course_id)
-
-        answers = survey.get_answers(self.student)
-        self.assertEquals(len(answers.keys()), 1)
-        self.assertTrue(self.student.id in answers)
-        self.assertEquals(answers[self.student.id], self.student_answers)
-
-        # update
-        survey.save_user_answers(self.student, self.student_answers_update, self.course_id)
-
-        answers = survey.get_answers(self.student)
-        self.assertEquals(len(answers.keys()), 1)
-        self.assertTrue(self.student.id in answers)
-        self.assertEquals(answers[self.student.id], self.student_answers_update)
-
-        # update with just a subset of the origin dataset
-        survey.save_user_answers(self.student, self.student_answers_update2, self.course_id)
-
-        answers = survey.get_answers(self.student)
-        self.assertEquals(len(answers.keys()), 1)
-        self.assertTrue(self.student.id in answers)
-        self.assertEquals(answers[self.student.id], self.student_answers_update2)
+        self.assertEquals(all_answers[self.student2.id], self.student2_answers)
 
     def test_limit_num_users(self):
         """
@@ -258,8 +201,8 @@ class SurveyModelsTests(TestCase):
         """
         survey = self._create_test_survey()
 
-        survey.save_user_answers(self.student, self.student_answers, self.course_id)
-        survey.save_user_answers(self.student2, self.student2_answers, self.course_id)
+        survey.save_user_answers(self.student, self.student_answers)
+        survey.save_user_answers(self.student2, self.student2_answers)
 
         # even though we have 2 users submitted answers
         # limit the result set to just 1
@@ -274,8 +217,8 @@ class SurveyModelsTests(TestCase):
         survey = self._create_test_survey()
         self.assertIsNotNone(survey)
 
-        survey.save_user_answers(self.student, self.student_answers, self.course_id)
-        survey.save_user_answers(self.student2, self.student2_answers, self.course_id)
+        survey.save_user_answers(self.student, self.student_answers)
+        survey.save_user_answers(self.student2, self.student2_answers)
 
         names = survey.get_field_names()
 

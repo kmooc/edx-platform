@@ -67,12 +67,11 @@ class CommentsServiceMockMixin(object):
                 "collection": threads,
                 "page": page,
                 "num_pages": num_pages,
-                "thread_count": len(threads),
             }),
             status=200
         )
 
-    def register_get_threads_search_response(self, threads, rewrite, num_pages=1):
+    def register_get_threads_search_response(self, threads, rewrite):
         """Register a mock response for GET on the CS thread search endpoint"""
         httpretty.register_uri(
             httpretty.GET,
@@ -80,9 +79,8 @@ class CommentsServiceMockMixin(object):
             body=json.dumps({
                 "collection": threads,
                 "page": 1,
-                "num_pages": num_pages,
+                "num_pages": 1,
                 "corrected_text": rewrite,
-                "thread_count": len(threads),
             }),
             status=200
         )
@@ -202,7 +200,6 @@ class CommentsServiceMockMixin(object):
                 "collection": threads,
                 "page": page,
                 "num_pages": num_pages,
-                "thread_count": len(threads),
             }),
             status=200
         )
@@ -304,16 +301,6 @@ class CommentsServiceMockMixin(object):
         """
         self.assert_query_params_equal(httpretty.last_request(), expected_params)
 
-    def request_patch(self, request_data):
-        """
-        make a request to PATCH endpoint and return response
-        """
-        return self.client.patch(
-            self.url,
-            json.dumps(request_data),
-            content_type="application/merge-patch+json"
-        )
-
 
 def make_minimal_cs_thread(overrides=None):
     """
@@ -342,8 +329,6 @@ def make_minimal_cs_thread(overrides=None):
         "comments_count": 0,
         "unread_comments_count": 0,
         "children": [],
-        "read": False,
-        "endorsed": False,
         "resp_total": 0,
     }
     ret.update(overrides or {})
@@ -358,7 +343,6 @@ def make_minimal_cs_comment(overrides=None):
     ret = {
         "type": "comment",
         "id": "dummy",
-        "commentable_id": "dummy",
         "thread_id": "dummy",
         "parent_id": None,
         "user_id": "0",
@@ -375,18 +359,3 @@ def make_minimal_cs_comment(overrides=None):
     }
     ret.update(overrides or {})
     return ret
-
-
-def make_paginated_api_response(results=None, count=0, num_pages=0, next_link=None, previous_link=None):
-    """
-    Generates the response dictionary of paginated APIs with passed data
-    """
-    return {
-        "pagination": {
-            "next": next_link,
-            "previous": previous_link,
-            "count": count,
-            "num_pages": num_pages,
-        },
-        "results": results or []
-    }

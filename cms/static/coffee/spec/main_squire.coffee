@@ -7,7 +7,7 @@ requirejs.config({
         "jquery.ui": "xmodule_js/common_static/js/vendor/jquery-ui.min",
         "jquery.form": "xmodule_js/common_static/js/vendor/jquery.form",
         "jquery.markitup": "xmodule_js/common_static/js/vendor/markitup/jquery.markitup",
-        "jquery.leanModal": "xmodule_js/common_static/js/vendor/jquery.leanModal",
+        "jquery.leanModal": "xmodule_js/common_static/js/vendor/jquery.leanModal.min",
         "jquery.smoothScroll": "xmodule_js/common_static/js/vendor/jquery.smooth-scroll.min",
         "jquery.scrollTo": "xmodule_js/common_static/js/vendor/jquery.scrollTo-1.4.2-min",
         "jquery.timepicker": "xmodule_js/common_static/js/vendor/timepicker/jquery.timepicker",
@@ -34,7 +34,7 @@ requirejs.config({
         "xblock/core": "xmodule_js/common_static/js/xblock/core",
         "xblock": "xmodule_js/common_static/coffee/src/xblock",
         "utility": "xmodule_js/common_static/js/src/utility",
-        "sinon": "xmodule_js/common_static/js/vendor/sinon-1.17.0",
+        "sinon": "xmodule_js/common_static/js/vendor/sinon-1.7.1",
         "squire": "xmodule_js/common_static/js/vendor/Squire",
         "jasmine-stealth": "xmodule_js/common_static/js/vendor/jasmine-stealth",
         "jasmine.async": "xmodule_js/common_static/js/vendor/jasmine.async",
@@ -42,8 +42,9 @@ requirejs.config({
         "domReady": "xmodule_js/common_static/js/vendor/domReady",
         "URI": "xmodule_js/common_static/js/vendor/URI.min",
 
-        "mathjax": "//cdn.mathjax.org/mathjax/2.5-latest/MathJax.js?config=TeX-MML-AM_HTMLorMML-full&delayStartupUntil=configured",
+        "mathjax": "//cdn.mathjax.org/mathjax/2.4-latest/MathJax.js?config=TeX-MML-AM_HTMLorMML-full&delayStartupUntil=configured",
         "youtube": "//www.youtube.com/player_api?noext",
+        "tender": "//api.tenderapp.com/tender_widget.js"
 
         "coffee/src/ajax_prefix": "xmodule_js/common_static/coffee/src/ajax_prefix"
     }

@@ -1,48 +1,48 @@
-;(function (define) {
+var edx = edx || {};
+
+(function($, gettext) {
     'use strict';
-    define([
-            'jquery',
-            'js/student_account/views/FormView'
-        ],
-        function($, FormView) {
 
-        return FormView.extend({
-            el: '#password-reset-form',
+    edx.student = edx.student || {};
+    edx.student.account = edx.student.account || {};
 
-            tpl: '#password_reset-tpl',
+    edx.student.account.PasswordResetView = edx.student.account.FormView.extend({
+        el: '#password-reset-form',
 
-            events: {
-                'click .js-reset': 'submitForm'
-            },
+        tpl: '#password_reset-tpl',
 
-            formType: 'password-reset',
+        events: {
+            'click .js-reset': 'submitForm'
+        },
 
-            requiredStr: '',
+        formType: 'password-reset',
 
-            submitButton: '.js-reset',
+        requiredStr: '',
 
-            preRender: function() {
-                this.element.show( $( this.el ) );
-                this.element.show( $( this.el ).parent() );
-                this.listenTo( this.model, 'sync', this.saveSuccess );
-            },
+        submitButton: '.js-reset',
 
-            toggleErrorMsg: function( show ) {
-                if ( show ) {
-                    this.setErrors();
-                    this.toggleDisableButton(false);
-                } else {
-                    this.element.hide( this.$errors );
-                }
-            },
+        preRender: function() {
+            this.element.show( $( this.el ) );
+            this.element.show( $( this.el ).parent() );
+            this.listenTo( this.model, 'sync', this.saveSuccess );
+        },
 
-            saveSuccess: function() {
-                this.trigger('password-email-sent');
-
-                // Destroy the view (but not el) and unbind events
-                this.$el.empty().off();
-                this.stopListening();
+        toggleErrorMsg: function( show ) {
+            if ( show ) {
+                this.setErrors();
+                this.toggleDisableButton(false);
+            } else {
+                this.element.hide( this.$errors );
             }
-        });
+        },
+
+        saveSuccess: function() {
+            this.trigger('password-email-sent');
+
+            // Destroy the view (but not el) and unbind events
+            this.$el.empty().off();
+            this.stopListening();
+        }
     });
-}).call(this, define || RequireJS.define);
+
+})(jQuery, gettext);

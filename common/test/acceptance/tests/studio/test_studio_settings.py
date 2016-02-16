@@ -14,11 +14,11 @@ from ...pages.studio.settings import SettingsPage
 from ...pages.studio.settings_advanced import AdvancedSettingsPage
 from ...pages.studio.settings_group_configurations import GroupConfigurationsPage
 from ...pages.lms.courseware import CoursewarePage
+from unittest import skip
 from textwrap import dedent
 from xmodule.partitions.partitions import Group
 
 
-@attr('shard_8')
 class ContentGroupConfigurationTest(StudioCourseTest):
     """
     Tests for content groups in the Group Configurations Page.
@@ -137,7 +137,7 @@ class ContentGroupConfigurationTest(StudioCourseTest):
             <problem markdown="Simple Problem" max_attempts="" weight="">
               <p>Choose Yes.</p>
               <choiceresponse>
-                <checkboxgroup>
+                <checkboxgroup direction="vertical">
                   <choice correct="true">Yes</choice>
                 </checkboxgroup>
               </choiceresponse>
@@ -230,7 +230,6 @@ class ContentGroupConfigurationTest(StudioCourseTest):
         ).fulfill()
 
 
-@attr('shard_8')
 class AdvancedSettingsValidationTest(StudioCourseTest):
     """
     Tests for validation feature in Studio's advanced settings tab
@@ -306,7 +305,7 @@ class AdvancedSettingsValidationTest(StudioCourseTest):
         # Let modal popup
         self.advanced_settings.wait_for_modal_load()
 
-        # Click Undo Changes button
+        # Press Undo Changes button
         self.advanced_settings.undo_changes_via_modal()
 
         # Check that changes are undone
@@ -337,6 +336,8 @@ class AdvancedSettingsValidationTest(StudioCourseTest):
 
         # Iterate through the wrong values and make sure they're still displayed
         for key, val in inputs.iteritems():
+            print self.advanced_settings.get(key)
+            print val
             self.assertEquals(
                 str(self.advanced_settings.get(key)),
                 str(val),

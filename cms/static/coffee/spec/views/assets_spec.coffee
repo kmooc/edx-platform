@@ -1,12 +1,14 @@
 define ["jquery", "jasmine", "common/js/spec_helpers/ajax_helpers", "squire"],
 ($, jasmine, AjaxHelpers, Squire) ->
 
+    feedbackTpl = readFixtures('system-feedback.underscore')
     assetLibraryTpl = readFixtures('asset-library.underscore')
     assetTpl = readFixtures('asset.underscore')
 
     describe "Asset view", ->
         beforeEach ->
             setFixtures($("<script>", {id: "asset-tpl", type: "text/template"}).text(assetTpl))
+            appendSetFixtures($("<script>", {id: "system-feedback-tpl", type: "text/template"}).text(feedbackTpl))
             appendSetFixtures(sandbox({id: "page-prompt"}))
 
             @promptSpies = jasmine.createSpyObj('Prompt.Warning', ["constructor", "show", "hide"])
@@ -22,10 +24,10 @@ define ["jquery", "jasmine", "common/js/spec_helpers/ajax_helpers", "squire"],
             @savingSpies.show.andReturn(@savingSpies)
 
             @injector = new Squire()
-            @injector.mock("common/js/components/views/feedback_prompt", {
+            @injector.mock("js/views/feedback_prompt", {
                 "Warning": @promptSpies.constructor
             })
-            @injector.mock("common/js/components/views/feedback_notification", {
+            @injector.mock("js/views/feedback_notification", {
                 "Confirmation": @confirmationSpies.constructor,
                 "Mini": @savingSpies.constructor
             })
@@ -137,6 +139,7 @@ define ["jquery", "jasmine", "common/js/spec_helpers/ajax_helpers", "squire"],
         beforeEach ->
             setFixtures($("<script>", {id: "asset-library-tpl", type: "text/template"}).text(assetLibraryTpl))
             appendSetFixtures($("<script>", {id: "asset-tpl", type: "text/template"}).text(assetTpl))
+            appendSetFixtures($("<script>", {id: "system-feedback-tpl", type: "text/template"}).text(feedbackTpl))
             window.analytics = jasmine.createSpyObj('analytics', ['track'])
             window.course_location_analytics = jasmine.createSpy()
             appendSetFixtures(sandbox({id: "asset_table_body"}))
@@ -146,7 +149,7 @@ define ["jquery", "jasmine", "common/js/spec_helpers/ajax_helpers", "squire"],
             @promptSpies.show.andReturn(@promptSpies)
 
             @injector = new Squire()
-            @injector.mock("common/js/components/views/feedback_prompt", {
+            @injector.mock("js/views/feedback_prompt", {
                 "Warning": @promptSpies.constructor
             })
 
@@ -290,12 +293,11 @@ define ["jquery", "jasmine", "common/js/spec_helpers/ajax_helpers", "squire"],
 
             it "should remove the deleted asset from the view", ->
                 {view: @view, requests: requests} = @createAssetsView(this)
-                AjaxHelpers.respondWithJson(requests, @mockAssetsResponse)
                 setup.call(this, requests)
                 # Delete the 2nd asset with success from server.
                 @view.$(".remove-asset-button")[1].click()
                 @promptSpies.constructor.mostRecentCall.args[0].actions.primary.click(@promptSpies)
-                AjaxHelpers.respondWithNoContent(requests)
+                req.respond(200) for req in requests.slice(1)
                 expect(@view.$el).toContainText("test asset 1")
                 expect(@view.$el).not.toContainText("test asset 2")
 
@@ -305,7 +307,7 @@ define ["jquery", "jasmine", "common/js/spec_helpers/ajax_helpers", "squire"],
                 # Delete the 2nd asset, but mimic a failure from the server.
                 @view.$(".remove-asset-button")[1].click()
                 @promptSpies.constructor.mostRecentCall.args[0].actions.primary.click(@promptSpies)
-                AjaxHelpers.respondWithError(requests)
+                req.respond(404) for req in requests
                 expect(@view.$el).toContainText("test asset 1")
                 expect(@view.$el).toContainText("test asset 2")
 

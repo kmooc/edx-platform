@@ -8,13 +8,8 @@ section.outside-app {
     margin-bottom: ($baseline*2);
   }
 
-  p, ul, form {
+  p {
     max-width: 600px;
     margin: 0 auto;
-    font: normal 1em/1.6em $serif;
-  }
-
-  li {
-    margin-top: 12px;
   }
 }

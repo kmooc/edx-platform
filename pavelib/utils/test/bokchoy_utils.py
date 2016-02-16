@@ -13,16 +13,15 @@ from pavelib.utils.process import run_background_process
 try:
     from pygments.console import colorize
 except ImportError:
-    colorize = lambda color, text: text
+    colorize = lambda color, text: text  # pylint: disable-msg=invalid-name
 
 __test__ = False  # do not collect
 
 
-def start_servers(default_store, coveragerc=None):
+def start_servers(default_store):
     """
     Start the servers we will run tests on, returns PIDs for servers.
     """
-    coveragerc = coveragerc or Env.BOK_CHOY_COVERAGERC
 
     def start_server(cmd, logfile, cwd=None):
         """
@@ -39,7 +38,7 @@ def start_servers(default_store, coveragerc=None):
             "manage {service} --settings bok_choy runserver "
             "{address} --traceback --noreload".format(
                 default_store=default_store,
-                coveragerc=coveragerc,
+                coveragerc=Env.BOK_CHOY_COVERAGERC,
                 service=service,
                 address=address,
             )
@@ -81,7 +80,7 @@ def wait_for_server(server, port):
             if int(response.status) == 200:
                 server_ok = True
                 break
-        except:  # pylint: disable=bare-except
+        except:  # pylint: disable-msg=bare-except
             pass
 
         attempts += 1
@@ -102,7 +101,7 @@ def wait_for_test_servers():
                 "red",
                 "Could not contact {} test server".format(service)
             )
-            print msg
+            print(msg)
             sys.exit(1)
 
 
@@ -113,7 +112,7 @@ def is_mongo_running():
     # The mongo command will connect to the service,
     # failing with a non-zero exit code if it cannot connect.
     output = os.popen('mongo --eval "print(\'running\')"').read()
-    return output and "running" in output
+    return (output and "running" in output)
 
 
 def is_memcache_running():
@@ -131,9 +130,9 @@ def is_mysql_running():
     """
     # We need to check whether or not mysql is running as a process
     # even if it is not daemonized.
-    with open(os.devnull, 'w') as os_devnull:
+    with open(os.devnull, 'w') as DEVNULL:
         #pgrep returns the PID, which we send to /dev/null
-        returncode = subprocess.call("pgrep mysqld", stdout=os_devnull, shell=True)
+        returncode = subprocess.call("pgrep mysqld", stdout=DEVNULL, shell=True)
     return returncode == 0
 
 
@@ -154,7 +153,7 @@ def check_mongo():
     """
     if not is_mongo_running():
         msg = colorize('red', "Mongo is not running locally.")
-        print msg
+        print(msg)
         sys.exit(1)
 
 
@@ -164,7 +163,7 @@ def check_memcache():
     """
     if not is_memcache_running():
         msg = colorize('red', "Memcache is not running locally.")
-        print msg
+        print(msg)
         sys.exit(1)
 
 
@@ -174,7 +173,7 @@ def check_mysql():
     """
     if not is_mysql_running():
         msg = colorize('red', "MySQL is not running locally.")
-        print msg
+        print(msg)
         sys.exit(1)
 
 

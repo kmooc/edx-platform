@@ -1,10 +1,7 @@
-"""
-Django ORM model specifications for the User API application
-"""
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
-from django.db.models.signals import post_delete, pre_save, post_save
+from django.db.models.signals import pre_delete, post_delete, pre_save, post_save
 from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
@@ -27,7 +24,7 @@ class UserPreference(models.Model):
     key = models.CharField(max_length=255, db_index=True, validators=[RegexValidator(KEY_REGEX)])
     value = models.TextField()
 
-    class Meta(object):
+    class Meta:  # pylint: disable=missing-docstring
         unique_together = ("user", "key")
 
     @classmethod
@@ -96,7 +93,7 @@ class UserCourseTag(models.Model):
     course_id = CourseKeyField(max_length=255, db_index=True)
     value = models.TextField()
 
-    class Meta(object):
+    class Meta:  # pylint: disable=missing-docstring
         unique_together = ("user", "course_id", "key")
 
 
@@ -111,5 +108,6 @@ class UserOrgTag(TimeStampedModel):
     org = models.CharField(max_length=255, db_index=True)
     value = models.TextField()
 
-    class Meta(object):
+    class Meta:
+        """ Meta class for defining unique constraints. """
         unique_together = ("user", "org", "key")

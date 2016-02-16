@@ -56,33 +56,57 @@ class TestGitExport(CourseTestCase):
         Test that the command interface works. Ignore stderr for clean
         test output.
         """
-        with self.assertRaisesRegexp(CommandError, 'This script requires.*'):
-            call_command('git_export', 'blah', 'blah', 'blah', stderr=StringIO.StringIO())
+        with self.assertRaises(SystemExit) as ex:
+            with self.assertRaisesRegexp(CommandError, 'This script requires.*'):
+                call_command('git_export', 'blah', 'blah', 'blah',
+                             stderr=StringIO.StringIO())
+        self.assertEqual(ex.exception.code, 1)
 
-        with self.assertRaisesRegexp(CommandError, 'This script requires.*'):
-            call_command('git_export', stderr=StringIO.StringIO())
+        with self.assertRaises(SystemExit) as ex:
+            with self.assertRaisesRegexp(CommandError, 'This script requires.*'):
+                call_command('git_export', stderr=StringIO.StringIO())
+        self.assertEqual(ex.exception.code, 1)
 
         # Send bad url to get course not exported
-        with self.assertRaisesRegexp(CommandError, unicode(GitExportError.URL_BAD)):
-            call_command('git_export', 'foo/bar/baz', 'silly', stderr=StringIO.StringIO())
-
+        with self.assertRaises(SystemExit) as ex:
+            with self.assertRaisesRegexp(CommandError, unicode(GitExportError.URL_BAD)):
+                call_command('git_export', 'foo/bar/baz', 'silly',
+                             stderr=StringIO.StringIO())
+        self.assertEqual(ex.exception.code, 1)
         # Send bad course_id to get course not exported
-        with self.assertRaisesRegexp(CommandError, unicode(GitExportError.BAD_COURSE)):
-            call_command('git_export', 'foo/bar:baz', 'silly', stderr=StringIO.StringIO())
+        with self.assertRaises(SystemExit) as ex:
+            with self.assertRaisesRegexp(CommandError, unicode(GitExportError.BAD_COURSE)):
+                call_command('git_export', 'foo/bar:baz', 'silly',
+                             stderr=StringIO.StringIO())
+        self.assertEqual(ex.exception.code, 1)
 
     def test_error_output(self):
         """
         Verify that error output is actually resolved as the correct string
         """
-        with self.assertRaisesRegexp(CommandError, unicode(GitExportError.BAD_COURSE)):
-            call_command(
-                'git_export', 'foo/bar:baz', 'silly'
-            )
+        output = StringIO.StringIO()
+        with self.assertRaises(SystemExit):
+            with self.assertRaisesRegexp(CommandError, unicode(GitExportError.BAD_COURSE)):
+                call_command(
+                    'git_export', 'foo/bar:baz', 'silly',
+                    stdout=output, stderr=output
+                )
+        self.assertIn('Bad course location provided', output.getvalue())
+        output.close()
 
-        with self.assertRaisesRegexp(CommandError, unicode(GitExportError.URL_BAD)):
-            call_command(
-                'git_export', 'foo/bar/baz', 'silly'
-            )
+        output = StringIO.StringIO()
+        with self.assertRaises(SystemExit):
+            with self.assertRaisesRegexp(CommandError, unicode(GitExportError.URL_BAD)):
+                call_command(
+                    'git_export', 'foo/bar/baz', 'silly',
+                    stdout=output, stderr=output
+                )
+        self.assertIn(
+            'Non writable git url provided. Expecting something like:'
+            ' git@github.com:mitocw/edx4edx_lite.git',
+            output.getvalue()
+        )
+        output.close()
 
     def test_bad_git_url(self):
         """

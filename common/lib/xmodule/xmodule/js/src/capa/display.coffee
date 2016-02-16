@@ -32,15 +32,11 @@ class @Problem
     @checkButtonCheckText = @checkButtonLabel.text()
     @checkButtonCheckingText = @checkButton.data('checking')
     @checkButton.click @check_fd
-    @hintButton = @$('div.action button.hint-button')
-    @hintButton.click @hint_button
-    @resetButton = @$('div.action button.reset')
-    @resetButton.click @reset
-    @showButton = @$('div.action button.show')
-    @showButton.click @show
-    @saveButton = @$('div.action button.save')
-    @saveButton.click @save
 
+    @$('div.action button.hint-button').click @hint_button
+    @$('div.action button.reset').click @reset
+    @$('div.action button.show').click @show
+    @$('div.action button.save').click @save
     # Accessibility helper for sighted keyboard users to show <clarification> tooltips on focus:
     @$('.clarification').focus (ev) =>
       icon = $(ev.target).children "i"
@@ -305,11 +301,16 @@ class @Problem
 
   check: =>
     if not @check_save_waitfor(@check_internal)
-      @disableAllButtonsWhileRunning @check_internal, true
+      @check_internal()
 
   check_internal: =>
+    @enableCheckButton false
+
+    timeout_id = @enableCheckButtonAfterTimeout()
+
     Logger.log 'problem_check', @answers
-    $.postWithPrefix "#{@url}/problem_check", @answers, (response) =>
+
+    $.postWithPrefix("#{@url}/problem_check", @answers, (response) =>
       switch response.success
         when 'incorrect', 'correct'
           window.SR.readElts($(response.contents).find('.status'))
@@ -321,11 +322,9 @@ class @Problem
         else
           @gentle_alert response.success
       Logger.log 'problem_graded', [@answers, response.contents], @id
+    ).always(@enableCheckButtonAfterResponse)
 
   reset: =>
-    @disableAllButtonsWhileRunning @reset_internal, false
-
-  reset_internal: =>
     Logger.log 'problem_reset', @answers
     $.postWithPrefix "#{@url}/problem_reset", id: @id, (response) =>
         @render(response.html)
@@ -410,7 +409,7 @@ class @Problem
 
   save: =>
     if not @check_save_waitfor(@save_internal)
-      @disableAllButtonsWhileRunning @save_internal, false
+      @save_internal()
 
   save_internal: =>
     Logger.log 'problem_save', @answers
@@ -498,6 +497,10 @@ class @Problem
     textline: (element) ->
       $(element).find('input').on 'input', ->
         $p = $(element).find('span.status')
+        `//alert($p.parents().find('.problem').find('.check-label').text())`
+        if $p.parents().find('.problem').find('.check-label').text() != 'check'
+          return
+
         `// Translators: the word unanswered here is about answering a problem the student must solve.`
         $p.parent().removeClass("correct incorrect").addClass "unsubmitted"
 
@@ -675,56 +678,16 @@ class @Problem
       element = $(element)
       element.find("section[id^='forinput']").removeClass('choicetextgroup_show_correct')
 
-  disableAllButtonsWhileRunning: (operationCallback, isFromCheckOperation) =>
-    # Used to keep the buttons disabled while operationCallback is running.
-    # params:
-    #   'operationCallback' is an operation to be run.
-    #   'isFromCheckOperation' is a boolean to keep track if 'operationCallback' was
-    #    @check, if so then text of check button will be changed as well.
-    @enableAllButtons false, isFromCheckOperation
-    operationCallback().always =>
-      @enableAllButtons true, isFromCheckOperation
-
-  enableAllButtons: (enable, isFromCheckOperation) =>
-    # Used to enable/disable all buttons in problem.
-    # params:
-    #   'enable' is a boolean to determine enabling/disabling of buttons.
-    #   'isFromCheckOperation' is a boolean to keep track if operation was initiated
-    #    from @check so that text of check button will also be changed while disabling/enabling
-    #    the check button.
-    if enable
-      @resetButton
-        .add(@saveButton)
-        .add(@hintButton)
-        .add(@showButton)
-        .removeClass('is-disabled')
-        .attr({'aria-disabled': 'false'})
-    else
-      @resetButton
-        .add(@saveButton)
-        .add(@hintButton)
-        .add(@showButton)
-        .addClass('is-disabled')
-        .attr({'aria-disabled': 'true'})
-
-    @enableCheckButton enable, isFromCheckOperation
-
-  enableCheckButton: (enable, changeText = true) =>
+  enableCheckButton: (enable) =>
     # Used to disable check button to reduce chance of accidental double-submissions.
-    # params:
-    #   'enable' is a boolean to determine enabling/disabling of check button.
-    #   'changeText' is a boolean to determine if there is need to change the
-    #    text of check button as well.
     if enable
       @checkButton.removeClass 'is-disabled'
       @checkButton.attr({'aria-disabled': 'false'})
-      if changeText
-        @checkButtonLabel.text(@checkButtonCheckText)
+      @checkButtonLabel.text(@checkButtonCheckText)
     else
       @checkButton.addClass 'is-disabled'
       @checkButton.attr({'aria-disabled': 'true'})
-      if changeText
-        @checkButtonLabel.text(@checkButtonCheckingText)
+      @checkButtonLabel.text(@checkButtonCheckingText)
 
   enableCheckButtonAfterResponse: =>
     @has_response = true
@@ -752,13 +715,7 @@ class @Problem
     else
       next_index = parseInt(hint_index) + 1
     $.postWithPrefix "#{@url}/hint_button", hint_index: next_index, input_id: @id, (response) =>
-      hint_container = @.$('.problem-hint')
-      hint_container.html(response.contents)
-      MathJax.Hub.Queue [
-        'Typeset'
-        MathJax.Hub
-        hint_container[0]
-      ]
-      hint_container.attr('hint_index', response.hint_index)
+      @$('.problem-hint').html(response.contents)
+      @$('.problem-hint').attr('hint_index', response.hint_index)
       @$('.hint-button').focus()  # a11y focus on click, like the Check button
 

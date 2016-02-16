@@ -7,12 +7,11 @@
         var TeamMembership = Backbone.Model.extend({
             defaults: {
                 date_joined: '',
-                last_activity_at: '',
                 team: null,
                 user: null
             },
 
-            parse: function (response) {
+            parse: function (response, options) {
                 response.team = new TeamModel(response.team);
                 return response;
             }

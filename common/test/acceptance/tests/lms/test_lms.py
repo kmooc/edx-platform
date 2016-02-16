@@ -3,24 +3,21 @@
 End-to-end tests for the LMS.
 """
 
-from datetime import datetime
 from flaky import flaky
 from textwrap import dedent
 from unittest import skip
 from nose.plugins.attrib import attr
 
 from bok_choy.promise import EmptyPromise
+from bok_choy.web_app_test import WebAppTest
 from ..helpers import (
     UniqueCourseTest,
     EventsTestMixin,
     load_data_str,
     generate_course_key,
     select_option_by_value,
-    element_has_text,
-    select_option_by_text,
-    get_selected_option_text
+    element_has_text
 )
-from ...pages.lms import BASE_URL
 from ...pages.lms.account_settings import AccountSettingsPage
 from ...pages.lms.auto_auth import AutoAuthPage
 from ...pages.lms.create_mode import ModeCreationPage
@@ -41,7 +38,7 @@ from ...pages.lms.course_wiki import CourseWikiPage, CourseWikiEditPage
 from ...fixtures.course import CourseFixture, XBlockFixtureDesc, CourseUpdateDesc
 
 
-@attr('shard_8')
+@attr('shard_4')
 class ForgotPasswordPageTest(UniqueCourseTest):
     """
     Test that forgot password forms is rendered if url contains 'forgot-password-modal'
@@ -51,17 +48,7 @@ class ForgotPasswordPageTest(UniqueCourseTest):
     def setUp(self):
         """ Initialize the page object """
         super(ForgotPasswordPageTest, self).setUp()
-        self.user_info = self._create_user()
         self.reset_password_page = ResetPasswordPage(self.browser)
-
-    def _create_user(self):
-        """
-        Create a unique user
-        """
-        auto_auth = AutoAuthPage(self.browser).visit()
-        user_info = auto_auth.user_info
-        LogoutPage(self.browser).visit()
-        return user_info
 
     def test_reset_password_form_visibility(self):
         # Navigate to the password reset page
@@ -70,20 +57,8 @@ class ForgotPasswordPageTest(UniqueCourseTest):
         # Expect that reset password form is visible on the page
         self.assertTrue(self.reset_password_page.is_form_visible())
 
-    def test_reset_password_confirmation_box_visibility(self):
-        # Navigate to the password reset page
-        self.reset_password_page.visit()
 
-        # Navigate to the password reset form and try to submit it
-        self.reset_password_page.fill_password_reset_form(self.user_info['email'])
-
-        self.reset_password_page.is_success_visible(".submission-success")
-
-        # Expect that we're shown a success message
-        self.assertIn("Password Reset Email Sent", self.reset_password_page.get_success_message())
-
-
-@attr('shard_8')
+@attr('shard_4')
 class LoginFromCombinedPageTest(UniqueCourseTest):
     """Test that we can log in using the combined login/registration page.
 
@@ -133,7 +108,7 @@ class LoginFromCombinedPageTest(UniqueCourseTest):
         self.login_page.visit().toggle_form()
         self.assertEqual(self.login_page.current_form, "register")
 
-    @flaky  # ECOM-1165
+    @flaky  # TODO fix this, see ECOM-1165
     def test_password_reset_success(self):
         # Create a user account
         email, password = self._create_unique_user()  # pylint: disable=unused-variable
@@ -253,7 +228,7 @@ class LoginFromCombinedPageTest(UniqueCourseTest):
         return (email, password)
 
 
-@attr('shard_8')
+@attr('shard_4')
 class RegisterFromCombinedPageTest(UniqueCourseTest):
     """Test that we can register a new user from the combined login/registration page. """
 
@@ -286,13 +261,18 @@ class RegisterFromCombinedPageTest(UniqueCourseTest):
             username=username,
             full_name="Test User",
             country="US",
-            favorite_movie="Mad Max: Fury Road",
             terms_of_service=True
         )
 
         # Expect that we reach the dashboard and we're auto-enrolled in the course
         course_names = self.dashboard_page.wait_for_page().available_courses
         self.assertIn(self.course_info["display_name"], course_names)
+
+        self.assertEqual("want to change your account settings?", self.dashboard_page.sidebar_menu_title.lower())
+        self.assertEqual(
+            "click the arrow next to your username above.",
+            self.dashboard_page.sidebar_menu_description.lower()
+        )
 
     def test_register_failure(self):
         # Navigate to the registration page
@@ -301,7 +281,6 @@ class RegisterFromCombinedPageTest(UniqueCourseTest):
         # Enter a blank for the username field, which is required
         # Don't agree to the terms of service / honor code.
         # Don't specify a country code, which is required.
-        # Don't specify a favorite movie.
         username = "test_{uuid}".format(uuid=self.unique_id[0:6])
         email = "{user}@example.com".format(user=username)
         self.register_page.register(
@@ -317,7 +296,6 @@ class RegisterFromCombinedPageTest(UniqueCourseTest):
         self.assertIn(u'Please enter your Public username.', errors)
         self.assertIn(u'You must agree to the edX Terms of Service and Honor Code.', errors)
         self.assertIn(u'Please select your Country.', errors)
-        self.assertIn(u'Please tell us your favorite movie.', errors)
 
     def test_toggle_to_login_form(self):
         self.register_page.visit().toggle_form()
@@ -344,7 +322,7 @@ class RegisterFromCombinedPageTest(UniqueCourseTest):
         self.assertIn("Galactica1", self.register_page.username_value)
 
         # Set country, accept the terms, and submit the form:
-        self.register_page.register(country="US", favorite_movie="Battlestar Galactica", terms_of_service=True)
+        self.register_page.register(country="US", terms_of_service=True)
 
         # Expect that we reach the dashboard and we're auto-enrolled in the course
         course_names = self.dashboard_page.wait_for_page().available_courses
@@ -368,7 +346,7 @@ class RegisterFromCombinedPageTest(UniqueCourseTest):
         account_settings.wait_for_message(field_id, "Successfully unlinked")
 
 
-@attr('shard_8')
+@attr('shard_4')
 class PayAndVerifyTest(EventsTestMixin, UniqueCourseTest):
     """Test that we can proceed through the payment and verification flow."""
     def setUp(self):
@@ -507,7 +485,7 @@ class PayAndVerifyTest(EventsTestMixin, UniqueCourseTest):
         self.assertEqual(enrollment_mode, 'verified')
 
 
-@attr('shard_1')
+@attr('shard_5')
 class CourseWikiTest(UniqueCourseTest):
     """
     Tests that verify the course wiki.
@@ -561,7 +539,7 @@ class CourseWikiTest(UniqueCourseTest):
         self.assertEqual(content, actual_content)
 
 
-@attr('shard_1')
+@attr('shard_5')
 class HighLevelTabTest(UniqueCourseTest):
     """
     Tests that verify each of the high-level tabs available within a course.
@@ -595,7 +573,7 @@ class HighLevelTabTest(UniqueCourseTest):
         course_fix.add_handout('demoPDF.pdf')
 
         course_fix.add_children(
-            XBlockFixtureDesc('static_tab', 'Test Static Tab', data=r"static tab data with mathjax \(E=mc^2\)"),
+            XBlockFixtureDesc('static_tab', 'Test Static Tab'),
             XBlockFixtureDesc('chapter', 'Test Section').add_children(
                 XBlockFixtureDesc('sequential', 'Test Subsection').add_children(
                     XBlockFixtureDesc('problem', 'Test Problem 1', data=load_data_str('multiple_choice.xml')),
@@ -619,7 +597,7 @@ class HighLevelTabTest(UniqueCourseTest):
 
         # Navigate to the course info page from the progress page
         self.progress_page.visit()
-        self.tab_nav.go_to_tab('Home')
+        self.tab_nav.go_to_tab('Course Info')
 
         # Expect just one update
         self.assertEqual(self.course_info_page.num_updates, 1)
@@ -655,18 +633,6 @@ class HighLevelTabTest(UniqueCourseTest):
         self.tab_nav.go_to_tab('Test Static Tab')
         self.assertTrue(self.tab_nav.is_on_tab('Test Static Tab'))
 
-    def test_static_tab_with_mathjax(self):
-        """
-        Navigate to a static tab (course content)
-        """
-        # From the course info page, navigate to the static tab
-        self.course_info_page.visit()
-        self.tab_nav.go_to_tab('Test Static Tab')
-        self.assertTrue(self.tab_nav.is_on_tab('Test Static Tab'))
-
-        # Verify that Mathjax has rendered
-        self.tab_nav.mathjax_has_rendered()
-
     def test_wiki_tab_first_time(self):
         """
         Navigate to the course wiki tab. When the wiki is accessed for
@@ -689,13 +655,13 @@ class HighLevelTabTest(UniqueCourseTest):
 
     def test_courseware_nav(self):
         """
-        Navigate to a particular unit in the course.
+        Navigate to a particular unit in the courseware.
         """
-        # Navigate to the course page from the info page
+        # Navigate to the courseware page from the info page
         self.course_info_page.visit()
-        self.tab_nav.go_to_tab('Course')
+        self.tab_nav.go_to_tab('Courseware')
 
-        # Check that the course navigation appears correctly
+        # Check that the courseware navigation appears correctly
         EXPECTED_SECTIONS = {
             'Test Section': ['Test Subsection'],
             'Test Section 2': ['Test Subsection 2', 'Test Subsection 3']
@@ -718,7 +684,6 @@ class HighLevelTabTest(UniqueCourseTest):
             self.assertIn(expected, actual_items)
 
 
-@attr('shard_1')
 class PDFTextBooksTabTest(UniqueCourseTest):
     """
     Tests that verify each of the textbook tabs available within a course.
@@ -748,6 +713,7 @@ class PDFTextBooksTabTest(UniqueCourseTest):
         # Auto-auth register for the course
         AutoAuthPage(self.browser, course_id=self.course_id).visit()
 
+    @skip('TODO: fix this, see TNL-2083')
     def test_verify_textbook_tabs(self):
         """
         Test multiple pdf textbooks loads correctly in lms.
@@ -759,7 +725,78 @@ class PDFTextBooksTabTest(UniqueCourseTest):
             self.tab_nav.go_to_tab("PDF Book {}".format(i))
 
 
-@attr('shard_1')
+@attr('shard_5')
+class VideoTest(UniqueCourseTest):
+    """
+    Navigate to a video in the courseware and play it.
+    """
+    def setUp(self):
+        """
+        Initialize pages and install a course fixture.
+        """
+        super(VideoTest, self).setUp()
+
+        self.course_info_page = CourseInfoPage(self.browser, self.course_id)
+        self.course_nav = CourseNavPage(self.browser)
+        self.tab_nav = TabNavPage(self.browser)
+        self.video = VideoPage(self.browser)
+
+        # Install a course fixture with a video component
+        course_fix = CourseFixture(
+            self.course_info['org'], self.course_info['number'],
+            self.course_info['run'], self.course_info['display_name']
+        )
+
+        course_fix.add_children(
+            XBlockFixtureDesc('chapter', 'Test Section').add_children(
+                XBlockFixtureDesc('sequential', 'Test Subsection').add_children(
+                    XBlockFixtureDesc('vertical', 'Test Unit').add_children(
+                        XBlockFixtureDesc('video', 'Video')
+                    )))).install()
+
+        # Auto-auth register for the course
+        AutoAuthPage(self.browser, course_id=self.course_id).visit()
+
+    @skip("BLD-563: Video Player Stuck on Pause")
+    def test_video_player(self):
+        """
+        Play a video in the courseware.
+        """
+
+        # Navigate to a video
+        self.course_info_page.visit()
+        self.tab_nav.go_to_tab('Courseware')
+
+        # The video should start off paused
+        # Since the video hasn't loaded yet, it's elapsed time is 0
+        self.assertFalse(self.video.is_playing)
+        self.assertEqual(self.video.elapsed_time, 0)
+
+        # Play the video
+        self.video.play()
+
+        # Now we should be playing
+        self.assertTrue(self.video.is_playing)
+
+        # Commented the below EmptyPromise, will move to its page once this test is working and stable
+        # Also there is should be no Promise check in any test as this should be done in Page Object
+        # Wait for the video to load the duration
+        # EmptyPromise(
+        #     lambda: self.video.duration > 0,
+        #     'video has duration', timeout=20
+        # ).fulfill()
+
+        # Pause the video
+        self.video.pause()
+
+        # Expect that the elapsed time and duration are reasonable
+        # Again, we can't expect the video to actually play because of
+        # latency through the ssh tunnel
+        self.assertGreaterEqual(self.video.elapsed_time, 0)
+        self.assertGreaterEqual(self.video.duration, self.video.elapsed_time)
+
+
+@attr('shard_5')
 class VisibleToStaffOnlyTest(UniqueCourseTest):
     """
     Tests that content with visible_to_staff_only set to True cannot be viewed by students.
@@ -844,7 +881,7 @@ class VisibleToStaffOnlyTest(UniqueCourseTest):
         self.assertEqual(["Html Child in visible unit"], self.course_nav.sequence_items)
 
 
-@attr('shard_1')
+@attr('shard_5')
 class TooltipTest(UniqueCourseTest):
     """
     Tests that tooltips are displayed
@@ -884,12 +921,12 @@ class TooltipTest(UniqueCourseTest):
         Verify that tooltips are displayed when you hover over the sequence nav bar.
         """
         self.course_info_page.visit()
-        self.tab_nav.go_to_tab('Course')
+        self.tab_nav.go_to_tab('Courseware')
 
-        self.courseware_page.verify_tooltips_displayed()
+        self.assertTrue(self.courseware_page.tooltips_displayed())
 
 
-@attr('shard_1')
+@attr('shard_5')
 class PreRequisiteCourseTest(UniqueCourseTest):
     """
     Tests that pre-requisite course messages are displayed
@@ -974,7 +1011,7 @@ class PreRequisiteCourseTest(UniqueCourseTest):
         self.settings_page.save_changes()
 
 
-@attr('shard_1')
+@attr('shard_5')
 class ProblemExecutionTest(UniqueCourseTest):
     """
     Tests of problems.
@@ -1033,11 +1070,11 @@ class ProblemExecutionTest(UniqueCourseTest):
     def test_python_execution_in_problem(self):
         # Navigate to the problem page
         self.course_info_page.visit()
-        self.tab_nav.go_to_tab('Course')
+        self.tab_nav.go_to_tab('Courseware')
         self.course_nav.go_to_section('Test Section', 'Test Subsection')
 
         problem_page = ProblemPage(self.browser)
-        self.assertEqual(problem_page.problem_name.upper(), 'PYTHON PROBLEM')
+        self.assertEqual(problem_page.problem_name, 'PYTHON PROBLEM')
 
         # Does the page have computation results?
         self.assertIn("What is the sum of 17 and 3?", problem_page.problem_text)
@@ -1053,7 +1090,7 @@ class ProblemExecutionTest(UniqueCourseTest):
         self.assertFalse(problem_page.is_correct())
 
 
-@attr('shard_1')
+@attr('shard_5')
 class EntranceExamTest(UniqueCourseTest):
     """
     Tests that course has an entrance exam.
@@ -1083,14 +1120,14 @@ class EntranceExamTest(UniqueCourseTest):
 
     def test_entrance_exam_section(self):
         """
-         Scenario: Any course that is enabled for an entrance exam, should have entrance exam chapter at course
+         Scenario: Any course that is enabled for an entrance exam, should have entrance exam chapter at courseware
          page.
-            Given that I am on the course page
-            When I view the course that has an entrance exam
+            Given that I am on the courseware page
+            When I view the courseware that has an entrance exam
             Then there should be an "Entrance Exam" chapter.'
         """
-        entrance_exam_link_selector = '.accordion .course-navigation .chapter .group-heading'
-        # visit course page and make sure there is not entrance exam chapter.
+        entrance_exam_link_selector = 'div#accordion nav div h3 a'
+        # visit courseware page and make sure there is not entrance exam chapter.
         self.courseware_page.visit()
         self.courseware_page.wait_for_page()
         self.assertFalse(element_has_text(
@@ -1122,82 +1159,3 @@ class EntranceExamTest(UniqueCourseTest):
             css_selector=entrance_exam_link_selector,
             text='Entrance Exam'
         ))
-
-
-@attr('shard_1')
-class NotLiveRedirectTest(UniqueCourseTest):
-    """
-    Test that a banner is shown when the user is redirected to
-    the dashboard from a non-live course.
-    """
-
-    def setUp(self):
-        """Create a course that isn't live yet and enroll for it."""
-        super(NotLiveRedirectTest, self).setUp()
-        CourseFixture(
-            self.course_info['org'], self.course_info['number'],
-            self.course_info['run'], self.course_info['display_name'],
-            start_date=datetime(year=2099, month=1, day=1)
-        ).install()
-        AutoAuthPage(self.browser, course_id=self.course_id).visit()
-
-    def test_redirect_banner(self):
-        """
-        Navigate to the course info page, then check that we're on the
-        dashboard page with the appropriate message.
-        """
-        url = BASE_URL + "/courses/" + self.course_id + "/" + 'info'
-        self.browser.get(url)
-        page = DashboardPage(self.browser)
-        page.wait_for_page()
-        self.assertIn(
-            'The course you are looking for does not start until',
-            page.banner_text
-        )
-
-
-@attr('shard_1')
-class LMSLanguageTest(UniqueCourseTest):
-    """ Test suite for the LMS Language """
-    def setUp(self):
-        super(LMSLanguageTest, self).setUp()
-        self.dashboard_page = DashboardPage(self.browser)
-        self.account_settings = AccountSettingsPage(self.browser)
-        AutoAuthPage(self.browser).visit()
-
-    def test_lms_language_change(self):
-        """
-        Scenario: Ensure that language selection is working fine.
-        First I go to the user dashboard page in LMS. I can see 'English' is selected by default.
-        Then I choose 'Dummy Language' from drop down (at top of the page).
-        Then I visit the student account settings page and I can see the language has been updated to 'Dummy Language'
-        in both drop downs.
-        After that I select the 'English' language and visit the dashboard page again.
-        Then I can see that top level language selector persist its value to 'English'.
-        """
-        self.dashboard_page.visit()
-        language_selector = self.dashboard_page.language_selector
-        self.assertEqual(
-            get_selected_option_text(language_selector),
-            u'English'
-        )
-
-        select_option_by_text(language_selector, 'Dummy Language (Esperanto)')
-        self.dashboard_page.wait_for_ajax()
-        self.account_settings.visit()
-        self.assertEqual(self.account_settings.value_for_dropdown_field('pref-lang'), u'Dummy Language (Esperanto)')
-        self.assertEqual(
-            get_selected_option_text(language_selector),
-            u'Dummy Language (Esperanto)'
-        )
-
-        # changed back to English language.
-        select_option_by_text(language_selector, 'English')
-        self.account_settings.wait_for_ajax()
-        self.assertEqual(self.account_settings.value_for_dropdown_field('pref-lang'), u'English')
-
-        self.dashboard_page.visit()
-        self.assertEqual(
-            get_selected_option_text(language_selector),
-            u'English'
-        )

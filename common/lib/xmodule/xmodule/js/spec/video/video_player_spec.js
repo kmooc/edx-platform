@@ -92,8 +92,7 @@ function (VideoPlayer) {
                         showinfo: 0,
                         enablejsapi: 1,
                         modestbranding: 1,
-                        html5: 1,
-                        cc_load_policy: 0
+                        html5: 1
                     },
                     videoId: 'cogebirgzzM',
                     events: events
@@ -119,8 +118,7 @@ function (VideoPlayer) {
                         rel: 0,
                         showinfo: 0,
                         enablejsapi: 1,
-                        modestbranding: 1,
-                        cc_load_policy: 0
+                        modestbranding: 1
                     },
                     videoId: 'abcdefghijkl',
                     events: jasmine.any(Object)
@@ -333,30 +331,6 @@ function (VideoPlayer) {
                     expect($.fn.trigger).toHaveBeenCalledWith('ended', {});
                 });
             });
-        });
-
-        describe('onSeek Youtube', function(){
-            beforeEach(function () {
-                state = jasmine.initializePlayerYouTube();
-                state.videoEl = $('video, iframe');
-            });
-
-           describe('when the video is playing', function () {
-               beforeEach(function(){
-                  state.videoPlayer.onStateChange({
-                      data: YT.PlayerState.PLAYING
-                  });
-               });
-
-               it('Video has started playing', function () {
-                   expect($('.video_control')).toHaveClass('pause');
-               });
-
-               it('seek the player', function () {
-                   state.videoPlayer.seekTo(10);
-                   expect(state.videoPlayer.currentTime).toBe(10);
-               });
-           });
         });
 
         describe('onSeek', function () {
@@ -747,6 +721,11 @@ function (VideoPlayer) {
                     $('.add-fullscreen').click();
                 });
 
+                it('replace the full screen button tooltip', function () {
+                    expect($('.add-fullscreen'))
+                        .toHaveAttr('title', 'Exit full browser');
+                });
+
                 it('add the video-fullscreen class', function () {
                     expect(state.el).toHaveClass('video-fullscreen');
                 });
@@ -768,6 +747,11 @@ function (VideoPlayer) {
                     state.videoFullScreen.isFullScreen = true;
                     state.videoFullScreen.fullScreenEl.attr('title', 'Exit-fullscreen');
                     $('.add-fullscreen').click();
+                });
+
+                it('replace the full screen button tooltip', function () {
+                    expect($('.add-fullscreen'))
+                        .toHaveAttr('title', 'Fill browser');
                 });
 
                 it('remove the video-fullscreen class', function () {

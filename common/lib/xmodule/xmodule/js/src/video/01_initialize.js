@@ -14,9 +14,10 @@
 
 define(
 'video/01_initialize.js',
-['video/03_video_player.js', 'video/00_i18n.js', 'moment'],
-function (VideoPlayer, i18n, moment) {
-    var moment = moment || window.moment;
+['video/03_video_player.js', 'video/00_i18n.js'],
+function (VideoPlayer, i18n) {
+    var moment = window.moment;
+
     /**
      * @function
      *
@@ -293,9 +294,9 @@ function (VideoPlayer, i18n, moment) {
             _hideWaitPlaceholder(state);
             state.el
                 .find('.video-player div')
-                    .addClass('hidden');
-            state.el
-                .find('.video-player .video-error')
+                    .addClass('hidden')
+                .end()
+                .find('.video-player h3')
                     .removeClass('hidden');
 
             return false;
@@ -497,7 +498,7 @@ function (VideoPlayer, i18n, moment) {
 
             this.el.find('.video-player div')
                 .removeClass('hidden');
-            this.el.find('.video-player .video-error')
+            this.el.find('.video-player h3')
                 .addClass('hidden');
 
             // If in reality the timeout was to short, try to
@@ -510,7 +511,7 @@ function (VideoPlayer, i18n, moment) {
 
             // In-browser HTML5 player does not support quality
             // control.
-            this.el.find('.quality_control').hide();
+            this.el.find('a.quality_control').hide();
             _renderElements(this);
         }
     }
@@ -595,11 +596,7 @@ function (VideoPlayer, i18n, moment) {
                     '[Video info]: YouTube returned an error for ' +
                     'video with id "' + self.id + '".'
                 );
-                // If the video is already loaded in `_waitForYoutubeApi` by the
-                // time we get here, then we shouldn't load it again.
-                if (!self.htmlPlayerLoaded) {
-                    self.loadHtmlPlayer();
-                }
+                self.loadHtmlPlayer();
             });
 
             window.Video.loadYouTubeIFrameAPI(scriptTag);

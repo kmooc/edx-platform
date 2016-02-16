@@ -2,6 +2,53 @@
 
 (function () {
 
+	var list = [{
+			  type: '분수',
+			  group: 0,
+                          children: [{value: "\\frac{a}{b}"},{value: "{a}/{b}"}]
+			},{
+			  type: '첨자',
+			  group: 1,
+                          children: [{value: "{a}^{b}"},{value: "{a}_{b}"},{value: "{a}^{b}_{c}"}]
+			},{
+			  type: '삼각함수',
+			  group: 2,
+                          children: [{value: "\\sin{a}"},{value: "\\cos{a}"},{value: "\\tan{a}"},{value: "\\sec{a}"},{value: "\\csc{a}"},{value: "\\cot{a}"},{value: "\\arcsin{a}"},{value: "\\arccos{a}"},{value: "\\arctan{a}"}]
+			},{
+			  type: '로그',
+			  group: 3,
+                          children: [{value: "\\sqrt{x}"},{value: "\\sqrt[3]{x}"},{value: "\\sqrt[n]{x}"},{value: "\\log{b}"},{value: "\\log_{a}{b}"},{value: "\\lg{b}"}]
+			},{
+			  type: '합계 등',
+			  group: 4,
+                          children: [{value: "\\sum_{k=1}^{N} k"},{value: "\\prod_{k=1}^{N} k"},{value: "\\coprod_{k=1}^{N} k"},{value: "\\bigcap_{i=1}^{n} A_i"},{value: "\\bigcup_{i=1}^{n} A_i"}]
+			},{
+			  type: '미적분',
+			  group: 5,
+                          children: [{value: "\\partial x"},{value: "\\partial^2 x"},{value: "dx"},{value: "\\dot x"},{value: "\\ddot y"},{value: "\\frac{dy}{dx}"},{value: "\\int_{A}^{B} "},{value: "\\iint_{A}^{B} "},{value: "\\iiint_{A}^{B} "},{value: "\\iiiint_{A}^{B} "},{value: "\\oint_{C} "}]
+			},{
+			  type: '극한',
+			  group: 6,
+                          children: [{value: "\\lim_{n \\to \\infty}{a_n}"},{value: "\\max_{i=0}^{n}{a_i}"},{value: "\\min_{i=0}^{n}{a_i}"}]
+			},{
+			  type: '부호',
+			  group: 7,
+                          children: [{value: "+"},{value: "-"},{value: "\\times "},{value: "\\div "},{value: "\\pm "},{value: "\\mp "},{value: "\\oplus "},{value: "\\otimes "},{value: "\\cdot "},{value: "\\land "},{value: "\\vee "},{value: "\\bar{q}"},{value: "\\to "},{value: "\\neg "},{value: "\\And "},{value: "\\sim "},{value: "\\approx "},{value: "\\simeq "},{value: "\\cong "},{value: "\\dot= "},{value: "\\le "},{value: "\\ll "},{value: "\\gg "},{value: "\\ge "},{value: "\\equiv "},{value: "\\not\\equiv "},{value: "\\ne "},{value: "\\propto "},{value: "\\geqq "},{value: "\\geqslant "},{value: "\\eqslantgtr "},{value: "\\gtrsim "},{value: "\\gtrapprox "},{value: "\\forall"},{value: "\\exists"},{value: "\\emptyset"},{value: "\\in"},{value: "\\ni"},{value: "\\notin"},{value: "\\subset"},{value: "\\subseteq"},{value: "\\supseteq"},{value: "\\supset"},{value: "\\cap"},{value: "\\cup"},{value: "\\angle"},{value: "^\\circ"},{value: "\\infty"}]
+			},{
+			  type: '매트릭스',
+			  group: 8,
+                          children: [{value: "\\begin{vmatrix} x & y \\\\ z & v \\end{vmatrix}"},{value: "\\begin{vmatrix} a & b & c \\\\ d & e & f \\\\ g & h & i \\end{vmatrix}"},{value: "\\begin{bmatrix}x & y \\\\ z & v \\end{bmatrix}"},{value: "\\begin{bmatrix} a & b &c \\\\ d & e & f \\\\ g & h & i \\end{bmatrix}"}]
+			},{
+			  type: '그리스문자',
+			  group: 9,
+                          children: [{value: "\\alpha "},{value: "\\beta "},{value: "\\gamma "},{value: "\\delta "},{value: "\\epsilon "},{value: "\\zeta "},{value: "\\eta "},{value: "\\theta "},{value: "\\iota "},{value: "\\kappa "},{value: "\\varkappa "},{value: "\\lambda "},{value: "\\mu "},{value: "\\nu "},{value: "\\xi "},{value: "\\omicron "},{value: "\\pi "},{value: "\\rho "},{value: "\\sigma "},{value: "\\tau "},{value: "\\upsilon "},{value: "\\phi "},{value: "\\chi "},{value: "\\psi "},{value: "\\omega "},
+			  {value: "\\Gamma "},{value: "\\Delta "},{value: "\\Theta "},{value: "\\Lambda "},{value: "\\Xi "},{value: "\\Pi "},{value: "\\Sigma "},{value: "\\Upsilon "},{value: "\\Phi "},{value: "\\Psi "},{value: "\\Omega "}]
+//			  {value: "\\varAlpha "},{value: "\\Beta "},{value: "\\Gamma "},{value: "\\Delta "},{value: "\\Epsilon "},{value: "\\Zeta "},{value: "\\Eta "},{value: "\\Theta "},{value: "\\Iota "},{value: "\\Kappa "},{value: "\\Varkappa "},{value: "\\Lambda "},{value: "\\Mu "},{value: "\\Nu "},{value: "\\Xi "},{value: "\\Omicron "},{value: "\\Pi "},{value: "\\Rho "},{value: "\\Sigma "},{value: "\\Tau "},{value: "\\Upsilon "},{value: "\\Phi "},{value: "\\Chi "},{value: "\\Psi "},{value: "\\Omega "}]
+			},{
+			  type: '벡터 등',
+			  group: 10,
+			  children:[{value: "\\dot{x}"},{value: "\\ddot{x}"},{value: "\\dddot{x}"},{value: "\\bar{x}"},{value: "\\vec{x}"},{value: "\\overleftarrow{a b}"},{value: "\\overrightarrow{a b}"}]
+			}];
     var util = {},
         position = {},
         ui = {},
@@ -25,31 +72,17 @@
     // this area.
     // -------------------------------------------------------------------
 
-    // The text that appears on the dialog box when entering links.
-    var linkDialogText = gettext("Insert Hyperlink"),
-        linkUrlHelpText = gettext("e.g. 'http://google.com/'"),
-        linkDestinationLabel = gettext("Link Description"),
-        linkDestinationHelpText = gettext("e.g. 'google'"),
-        linkDestinationError = gettext("Please provide a description of the link destination."),
-        linkDefaultText = "http://"; // The default text that appears in input
+    // The text that appears on the upper part of the dialog box when
+    // entering links.
+    var linkDialogText = gettext("<p><b>Insert Hyperlink</b></p><p>http://example.com/ \"optional title\"</p>");
+    var imageDialogText = gettext("<p><b>Insert Image (upload file or type url)</b></p><p>http://example.com/images/diagram.jpg \"optional title\"<br><br></p>");
 
-    // The text that appears on the dialog box when entering Images.
-    var imageDialogText = gettext("Insert Image (upload file or type URL)"),
-        imageUrlHelpText = gettext("Type in a URL or use the \"Choose File\" button to upload a file from your machine. (e.g. 'http://example.com/img/clouds.jpg')"),  // jshint ignore:line
-        imageDescriptionLabel = gettext("Image Description"),
-        imageDefaultText = "http://", // The default text that appears in input
-        imageDescError = gettext("Please describe this image or agree that it has no contextual value by checking the checkbox."),  // jshint ignore:line
-        imageDescriptionHelpText = gettext("e.g. 'Sky with clouds'. The description is helpful for users who cannot see the image."),  // jshint ignore:line
-        imageDescriptionHelpLink = {
-            href: 'http://www.w3.org/TR/html5/embedded-content-0.html#alt',
-            text: gettext("How to create useful text alternatives.")
-        },
-        imageIsDecorativeLabel = gettext("This image is for decorative purposes only and does not require a description.");  // jshint ignore:line
+    // The default text that appears in the dialog input box when entering
+    // links.
+    var imageDefaultText = "http://";
+    var linkDefaultText = "http://";
 
-    // Text that is shared between both link and image dialog boxes.
-    var defaultHelpHoverTitle = gettext("Markdown Editing Help"),
-        urlLabel = gettext("URL"),
-        urlError = gettext("Please provide a valid URL.");
+    var defaultHelpHoverTitle = gettext("Markdown Editing Help");
 
     // -------------------------------------------------------------------
     //  END OF YOUR CHANGES
@@ -74,7 +107,6 @@
                                                   * its own image insertion dialog, this hook should return true, and the callback should be called with the chosen
                                                   * image url (or null if the user cancelled). If this hook returns false, the default dialog will be used.
                                                   */
-        this.util = util;
 
         this.getConverter = function () { return markdownConverter; }
 
@@ -265,10 +297,6 @@
         this.buttonBar = doc.getElementById("wmd-button-bar" + postfix);
         this.preview = doc.getElementById("wmd-preview" + postfix);
         this.input = doc.getElementById("wmd-input" + postfix);
-    };
-
-    util.isValidUrl = function(url) {
-        return /^((?:http|https|ftp):\/{2}|\/)[^]+$/.test(url);
     };
 
     // Returns true if the DOM element is visible, false if it's hidden.
@@ -1029,28 +1057,17 @@
     // callback: The function which is executed when the prompt is dismissed, either via OK or Cancel.
     //      It receives a single argument; either the entered text (if OK was chosen) or null (if Cancel
     //      was chosen).
-    ui.prompt = function (title,
-                          urlLabel,
-                          urlHelp,
-                          urlError,
-                          urlDescLabel,
-                          urlDescHelp,
-                          urlDescHelpLink,
-                          urlDescError,
-                          defaultInputText,
-                          callback,
-                          imageIsDecorativeLabel,
-                          imageUploadHandler) {
+    ui.prompt = function (text, defaultInputText, callback, imageUploadHandler) {
 
         // These variables need to be declared at this level since they are used
         // in multiple functions.
-        var dialog,         // The dialog box.
-            urlInput,       // The text box where you enter the hyperlink.
-            urlErrorMsg,
-            descInput,      // The text box where you enter the description.
-            descErrorMsg,
-            okButton,
-            cancelButton;
+        var dialog;         // The dialog box.
+        var input;         // The text box where you enter the hyperlink.
+
+
+        if (defaultInputText === undefined) {
+            defaultInputText = "";
+        }
 
         // Used as a keydown event handler. Esc dismisses the prompt.
         // Key code 27 is ESC.
@@ -1061,108 +1078,112 @@
             }
         };
 
-        var clearFormErrorMessages = function () {
-            urlInput.classList.remove('has-error');
-            urlErrorMsg.style.display = 'none';
-            descInput.classList.remove('has-error');
-            descErrorMsg.style.display = 'none';
-        };
-
         // Dismisses the hyperlink input box.
         // isCancel is true if we don't care about the input text.
         // isCancel is false if we are going to keep the text.
         var close = function (isCancel) {
             util.removeEvent(doc.body, "keydown", checkEscape);
-            var url = urlInput.value.trim();
-            var description = descInput.value.trim();
-
-            clearFormErrorMessages();
+            var text = input.value;
 
             if (isCancel) {
-                url = null;
+                text = null;
             }
             else {
                 // Fixes common pasting errors.
-                url = url.replace(/^http:\/\/(https?|ftp):\/\//, '$1://');
+                text = text.replace(/^http:\/\/(https?|ftp):\/\//, '$1://');
                 // doesn't change url if started with '/' (local)
-                if (!/^(?:https?|ftp):\/\//.test(url) && url.charAt(0) !== '/') {
-                    url = 'http://' + url;
+                if (!/^(?:https?|ftp):\/\//.test(text) && text.charAt(0) != '/') {
+                    text = 'http://' + text;
                 }
             }
 
-            var isValidUrl = util.isValidUrl(url),
-                isValidDesc = (
-                    descInput.checkValidity() &&
-                    (descInput.required ? description.length : true)
-                );
+            dialog.parentNode.removeChild(dialog);
 
-            if ((isValidUrl && isValidDesc) || isCancel) {
-                dialog.parentNode.removeChild(dialog);
-                callback(url, description);
-            } else {
-                var errorCount = 0;
-                if (!isValidUrl) {
-                    urlInput.classList.add('has-error');
-                    urlErrorMsg.style.display = 'inline-block';
-                    errorCount += 1;
-                } if (!isValidDesc) {
-                    descInput.classList.add('has-error');
-                    descErrorMsg.style.display = 'inline-block';
-                    errorCount += 1;
-                }
-
-                document.getElementById('wmd-editor-dialog-form-errors').textContent = [
-                    interpolate(
-                        ngettext(
-                            // Translators: 'errorCount' is the number of errors found in the form.
-                            '%(errorCount)s error found in form.', '%(errorCount)s errors found in form.',
-                            errorCount
-                        ), {'errorCount': errorCount}, true
-                    ),
-                    !isValidUrl ? urlErrorMsg.textContent : '',
-                    !isValidDesc ? descErrorMsg.textContent : ''
-                ].join(' ');
-
-                document.getElementById('wmd-editor-dialog-form-errors').focus();
-            }
-
+            callback(text);
             return false;
         };
 
+
+
         // Create the text input box form/window.
         var createDialog = function () {
+
             // The main dialog box.
             dialog = doc.createElement("div");
-            dialog.innerHTML = _.template(
-                document.getElementById("customwmd-prompt-template").innerHTML, {
-                title: title,
-                uploadFieldClass: (imageUploadHandler ? 'file-upload' : ''),
-                urlLabel: urlLabel,
-                urlError: urlError,
-                urlHelp: urlHelp,
-                urlDescLabel: urlDescLabel,
-                descError: urlDescError,
-                urlDescHelp: urlDescHelp,
-                urlDescHelpLink: urlDescHelpLink,
-                okText: gettext("OK"),
-                cancelText: gettext("Cancel"),
-                chooseFileText: gettext("Choose File"),
-                imageIsDecorativeLabel: imageIsDecorativeLabel,
-                imageUploadHandler: imageUploadHandler
-            });
             dialog.setAttribute("role", "dialog");
-            dialog.setAttribute("tabindex", "-1");
-            dialog.setAttribute("aria-labelledby", "editorDialogTitle");
             dialog.className = "wmd-prompt-dialog";
             dialog.style.padding = "10px;";
             dialog.style.position = "fixed";
-            dialog.style.width = "500px";
+            dialog.style.width = "400px";
             dialog.style.zIndex = "1001";
 
-            doc.body.appendChild(dialog);
+            // The dialog text.
+            var question = doc.createElement("div");
+            question.innerHTML = text;
+            question.style.padding = "5px";
+            dialog.appendChild(question);
 
-            // This has to be done AFTER adding the dialog to the form if you
-            // want it to be centered.
+            // The web form container for the text box and buttons.
+            var form = doc.createElement("form"),
+                style = form.style;
+            form.onsubmit = function () { return close(false); };
+            style.padding = "0";
+            style.margin = "0";
+            style.cssFloat = "left";
+            style.width = "100%";
+            style.textAlign = "center";
+            style.position = "relative";
+            dialog.appendChild(form);
+
+            // The input text box
+            input = doc.createElement("input");
+            input.type = "text";
+            input.value = defaultInputText;
+            style = input.style;
+            style.display = "block";
+            style.width = "80%";
+            style.marginLeft = style.marginRight = "auto";
+            form.appendChild(input);
+
+            // The choose file button if prompt type is 'image'
+
+            if (imageUploadHandler) {
+              var chooseFile = doc.createElement("input");
+              chooseFile.type = "file";
+              chooseFile.name = "file-upload";
+              chooseFile.id = "file-upload";
+              chooseFile.onchange = function() {
+                imageUploadHandler(this, input);
+              };
+              form.appendChild(doc.createElement("br"));
+              form.appendChild(chooseFile);
+            }
+
+
+            // The ok button
+            var okButton = doc.createElement("input");
+            okButton.type = "button";
+            okButton.onclick = function () { return close(false); };
+            okButton.value = "OK";
+            style = okButton.style;
+            style.margin = "10px";
+            style.display = "inline";
+            style.width = "7em";
+
+
+            // The cancel button
+            var cancelButton = doc.createElement("input");
+            cancelButton.type = "button";
+            cancelButton.onclick = function () { return close(true); };
+            cancelButton.value = "Cancel";
+            style = cancelButton.style;
+            style.margin = "10px";
+            style.display = "inline";
+            style.width = "7em";
+
+            form.appendChild(okButton);
+            form.appendChild(cancelButton);
+
             util.addEvent(doc.body, "keydown", checkEscape);
             dialog.style.top = "50%";
             dialog.style.left = "50%";
@@ -1172,56 +1193,14 @@
                 dialog.style.top = doc.documentElement.scrollTop + 200 + "px";
                 dialog.style.left = "50%";
             }
+            doc.body.appendChild(dialog);
+
+            // This has to be done AFTER adding the dialog to the form if you
+            // want it to be centered.
             dialog.style.marginTop = -(position.getHeight(dialog) / 2) + "px";
             dialog.style.marginLeft = -(position.getWidth(dialog) / 2) + "px";
 
-            urlInput = document.getElementById("new-url-input");
-            urlErrorMsg = document.getElementById("new-url-input-field-message");
-            descInput = document.getElementById("new-url-desc-input");
-            descErrorMsg = document.getElementById("new-url-desc-input-field-message");
-            urlInput.value = defaultInputText;
-
-            okButton = document.getElementById("new-link-image-ok");
-            cancelButton = document.getElementById("new-link-image-cancel");
-
-            okButton.onclick = function () { return close(false); };
-            cancelButton.onclick = function () { return close(true); };
-
-            if(imageUploadHandler) {
-                var startUploadHandler = function () {
-                    document.getElementById("file-upload").onchange = function() {
-                        imageUploadHandler(this, urlInput);
-                        urlInput.focus();
-
-                        // Ensures that a user can update their file choice.
-                        startUploadHandler();
-                    };
-                };
-                startUploadHandler();
-                document.getElementById("file-upload-proxy").onclick = function () {
-                    document.getElementById("file-upload").click();
-                    return false;
-                };
-                document.getElementById("img-is-decorative").onchange = function () {
-                    descInput.required = !descInput.required;
-                };
-            }
-
-            // trap focus in the dialog box
-            $(dialog).on("keydown", function (event) {
-                // On tab backward from the first tabbable item in the prompt
-                if (event.which === 9 && event.shiftKey && event.target === urlInput) {
-                    event.preventDefault();
-                    cancelButton.focus();
-                }
-                // On tab forward from the last tabbable item in the prompt
-                else if (event.which === 9 && !event.shiftKey && event.target === cancelButton) {
-                    event.preventDefault();
-                    urlInput.focus();
-                }
-            });
         };
-
 
         // Why is this in a zero-length timeout?
         // Is it working around a browser bug?
@@ -1230,19 +1209,19 @@
             createDialog();
 
             var defTextLen = defaultInputText.length;
-            if (urlInput.selectionStart !== undefined) {
-                urlInput.selectionStart = 0;
-                urlInput.selectionEnd = defTextLen;
+            if (input.selectionStart !== undefined) {
+                input.selectionStart = 0;
+                input.selectionEnd = defTextLen;
             }
-            else if (urlInput.createTextRange) {
-                var range = urlInput.createTextRange();
+            else if (input.createTextRange) {
+                var range = input.createTextRange();
                 range.collapse(false);
                 range.moveStart("character", -defTextLen);
                 range.moveEnd("character", defTextLen);
                 range.select();
             }
 
-            dialog.focus();
+            input.focus();
         }, 0);
     };
 
@@ -1269,6 +1248,9 @@
                 switch (keyCodeStr) {
                     case "b":
                         doClick(buttons.bold);
+                        break;
+                    case "e":
+                        doClick(buttons.equation);
                         break;
                     case "i":
                         doClick(buttons.italic);
@@ -1471,6 +1453,91 @@
             return function () { method.apply(commandManager, arguments); }
         }
 
+	window.UpdateMath = function(str) {
+	    $('#MathOutput').html('\\('+str+'\\)');
+	    MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+	}
+
+	function inputEquation(i,j) {
+	    var str = list[i].children[j].value;
+	    var obj = document.getElementById("myText");
+	    var startPos = obj.selectionStart;
+	    var endPos = obj.selectionEnd;
+	    var tmpStr = obj.value;
+	    obj.value = tmpStr.substring(0,startPos)+str+tmpStr.substring(endPos);
+	    obj.selectionStart = obj.selectionEnd = startPos+str.length;
+	    UpdateMath(obj.value);
+	    obj.focus();
+	}
+
+	function changeList(typeNum) {
+	    var i = 0;
+	    while (document.getElementById('type_'+i) != undefined) {
+		document.getElementById('type_'+i).className ="btn_type";
+		i++;
+	    }
+	    document.getElementById('type_'+typeNum).className ="btn_type active";
+//	    while ($('#type_'+i) != undefined) {
+//		$('#type_'+i).removeClass('active');
+//		i++;
+//	    }
+//	    $('#type_'+typeNum).addClass('active');
+//	    var el = document.getElementById("equationList");
+//	    el.innerHTML ="";
+	    var el = $('#equationList');
+	    el.html('');
+	    for (var i in list) {
+		if (list[i].group === typeNum) {
+		    var equationList = list[i].children;
+		    for (var j in equationList) {
+//			var newButton = document.createElement("span");
+//			newButton.id = 'equation_'+i;
+//			newButton.setAttribute("onclick", "inputEquation("+i+","+j+");");
+//			newButton.setAttribute("class", "equation_span");
+//			var newDiv = document.createElement("span");
+//			newDiv.innerHTML = "$"+equationList[j].value+"$";
+//			newButton.appendChild(newDiv);
+//			el.appendChild(newButton);
+
+			var newButton = $('<span></span>');
+			newButton.attr('id','equation_'+j);
+			newButton.click({'i':i,'j':j},function(event){inputEquation(event.data.i,event.data.j);});
+			newButton.addClass('equation_span');
+			var newSpan = $('<span></span');
+			newSpan.html('\\('+equationList[j].value+'\\)');
+//			newSpan.html(i+" "+j);
+			newButton.append(newSpan);
+			el.append(newButton);
+		    }
+		}
+	    }
+	    MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+	}
+
+	function newTypeList(name,type) {
+//	    var tl = document.getElementById("typeList");
+//	    var newItem = document.createElement("li");
+//	    var newButton = document.createElement("div");
+//	    newButton.id = "type_"+type;
+//	    newButton.type = "button";
+//	    newButton.innerHTML = name;
+//	    newButton.setAttribute("onmouseover", "changeList("+type+");");
+//	    newButton.setAttribute("class", "btn_type");
+//	    newItem.appendChild(newButton);
+//	    newItem.innerHTML = name;
+//	    tl.appendChild(newItem);
+	    var tl = $('#typeList');
+	    var newItem = $('<li></li>');
+	    var newButton = $('<div></div>');
+	    newButton.attr('id','type_'+type);
+	    newButton.attr('type','button');
+	    newButton.html(name);
+	    newButton.mouseover(function(){changeList(type);});
+	    newButton.addClass('btn_type');
+	    newItem.append(newButton);
+	    tl.append(newItem);
+	}
+
         function makeSpritedButtonRow() {
 
             var buttonBar = panels.buttonBar;
@@ -1532,7 +1599,7 @@
             }));
             buttons.heading = makeButton("wmd-heading-button", gettext("Heading (Ctrl+H)"), "-160px", bindCommand("doHeading"));
             buttons.hr = makeButton("wmd-hr-button", gettext("Horizontal Rule (Ctrl+R)"), "-180px", bindCommand("doHorizontalRule"));
-            makeSpacer(3);
+            //makeSpacer(3);
             buttons.undo = makeButton("wmd-undo-button", gettext("Undo (Ctrl+Z)"), "-200px", null);
             buttons.undo.execute = function (manager) { if (manager) manager.undo(); };
 
@@ -1541,7 +1608,58 @@
                 gettext("Redo (Ctrl+Shift+Z)"); // mac and other non-Windows platforms
 
             buttons.redo = makeButton("wmd-redo-button", redoTitle, "-220px", null);
+
             buttons.redo.execute = function (manager) { if (manager) manager.redo(); };
+            //makeSpacer(4); no sass for spacer4
+            //buttons.equation = makeButton("wmd-equation-button", gettext("Equation (Ctrl+E)"), "-260px", bindCommand(function (chunk, postProcessing){
+            buttons.equation = makeButton("wmd-equation-button", gettext("수식편집기 (Ctrl+E)"), "-260px", bindCommand(function (chunk, postProcessing){
+//		var strRtn = window.showModalDialog("/static/js/vendor/ljneditor/test.html","","dialogHeight:500px;dialogWidth:800px;");
+//		alert(strRtn);
+//                if (strRtn != undefined  && strRtn !='') this.doEquation(chunk, postProcessing, strRtn);
+		$("body").append("<div id=\"divBackground\" class=\"wmd-prompt-background\" style=\"position: fixed; z-index: 1000; opacity: 0.5; top: 0px; left: 0px; height: 100%; width: 100%\"></div>");
+		$("body").append("<div id='divEquation' role='dialog' class='wmd-prompt-dialog' style='position: fixed; width: 800px; z-index: 1001; top: 50%; left: 40%; display: block; margin-top: -143.5px; margin-left: -221px;'>"
+		+"<div id='typeList' class='LJN_nav'></div>"
+		+"<div id='equationList' class='LJN_equation'></div>"
+		+"<div class='LJN_panel'>"
+		    +"<textarea id='myText' class='LJN_input' onkeyup='UpdateMath(this.value)' autofocus></textarea>"
+		    +"<div class = 'preview_container'><div class='preview_label'>미리보기</div>"
+		    +"<div id='MathOutput' class='LJN_preview'></div>"
+		+"</div>"
+	    +"</div><button id='btn_submit' class='btn_submit'>수식등록</button><button id='btn_cancel' class='btn_cancel'>취소</button></div>");
+		for (var i in list) {
+		    newTypeList(list[i].type,list[i].group);
+		}
+		changeList(0);
+	        //var strRtn = document.getElementById("myText").value;
+		//this.doEquation(chunk, postProcessing, strRtn);
+		$("#btn_submit").click({'pthis':this,'chunk':chunk,'postProcessing':postProcessing},function(event){
+		    var strRtn = document.getElementById("myText").value;
+		    event.data.pthis.doEquation(event.data.chunk, event.data.postProcessing, strRtn);
+		    inputBox.value = event.data.chunk.before+event.data.chunk.after;
+                    previewManager.refresh();
+		    $("#divEquation").remove();
+		    $("#divBackground").remove();
+		});
+		$("#btn_cancel").click(function(){
+		    $("#divEquation").remove();
+		    $("#divBackground").remove();
+		});
+//		alert('test');
+
+	    }));
+//	    buttons.equation.removeChild(buttons.equation.lastChild);
+//            var buttonImage = document.createElement("span");
+//	    buttonImage.src = "/static/images/equation/e0.png";
+//	    buttons.equation.appendChild(buttonImage);
+
+
+
+            var tmpText = document.createElement("input");
+	    tmpText.id = "equation-text"
+	    tmpText.type = "hidden";
+	    tmpText.value = "test";
+	    buttonRow.appendChild(tmpText);
+
 
             if (helpOptions) {
                 var helpButton = document.createElement("span");
@@ -1752,6 +1870,7 @@
     }
 
     commandProto.doLinkOrImage = function (chunk, postProcessing, isImage, imageUploadHandler) {
+
         chunk.trimWhitespace();
         chunk.findTags(/\s*!?\[/, /\][ ]?(?:\n[ ]*)?(\[.*?\])?/);
         var background;
@@ -1778,7 +1897,8 @@
             var that = this;
             // The function to be executed when you enter a link and press OK or Cancel.
             // Marks up the link and adds the ref.
-            var linkEnteredCallback = function (link, description) {
+            var linkEnteredCallback = function (link) {
+
                 background.parentNode.removeChild(background);
 
                 if (link !== null) {
@@ -1810,10 +1930,10 @@
 
                     if (!chunk.selection) {
                         if (isImage) {
-                            chunk.selection = description ? description : "";
+                            chunk.selection = gettext("enter image description here");
                         }
                         else {
-                            chunk.selection = description ? description : gettext("enter link description here");
+                            chunk.selection = gettext("enter link description here");
                         }
                     }
                 }
@@ -1823,36 +1943,11 @@
             background = ui.createBackground();
 
             if (isImage) {
-                if (!this.hooks.insertImageDialog(linkEnteredCallback)) {
-                    ui.prompt(
-                        imageDialogText,
-                        urlLabel,
-                        imageUrlHelpText,
-                        urlError,
-                        imageDescriptionLabel,
-                        imageDescriptionHelpText,
-                        imageDescriptionHelpLink,
-                        imageDescError,
-                        imageDefaultText,
-                        linkEnteredCallback,
-                        imageIsDecorativeLabel,
-                        imageUploadHandler
-                    );
-                }
+                if (!this.hooks.insertImageDialog(linkEnteredCallback))
+                    ui.prompt(imageDialogText, imageDefaultText, linkEnteredCallback, imageUploadHandler);
             }
             else {
-                ui.prompt(
-                    linkDialogText,
-                    urlLabel,
-                    linkUrlHelpText,
-                    urlError,
-                    linkDestinationLabel,
-                    linkDestinationHelpText,
-                    '',
-                    linkDestinationError,
-                    linkDefaultText,
-                    linkEnteredCallback
-                );
+                ui.prompt(linkDialogText, linkDefaultText, linkEnteredCallback);
             }
             return true;
         }
@@ -2279,6 +2374,17 @@
         chunk.selection = "";
         chunk.skipLines(2, 1, true);
     }
+
+    // chunk: The selected region that will be enclosed with $
+    // insertText: Equation
+    commandProto.doEquation = function (chunk, postProcessing, insertText) {
+
+        // Get rid of whitespace and fixup newlines.
+        chunk.trimWhitespace();
+	chunk.selection = "";
+        chunk.before = chunk.before+ " $" + insertText + "$ ";
+        return;
+    };
 
 
 })();

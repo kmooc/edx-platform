@@ -6,8 +6,9 @@ from mock import Mock, patch
 from nose.plugins.attrib import attr
 from functools import partial
 
-from courseware.model_data import DjangoKeyValueStore, FieldDataCache, InvalidScopeError
-from courseware.models import StudentModule, XModuleUserStateSummaryField
+from courseware.model_data import DjangoKeyValueStore
+from courseware.model_data import InvalidScopeError, FieldDataCache
+from courseware.models import StudentModule
 from courseware.models import XModuleStudentInfoField, XModuleStudentPrefsField
 
 from student.tests.factories import UserFactory
@@ -249,7 +250,7 @@ class TestMissingStudentModule(TestCase):
         # to discover if something other than the DjangoXBlockUserStateClient
         # has written to the StudentModule (such as UserStateCache setting the score
         # on the StudentModule).
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(3):
             self.kvs.set(user_state_key('a_field'), 'a_value')
 
         self.assertEquals(1, sum(len(cache) for cache in self.field_data_cache.cache.values()))
@@ -394,7 +395,7 @@ class TestUserStateSummaryStorage(StorageTestBase, TestCase):
     factory = UserStateSummaryFactory
     scope = Scope.user_state_summary
     key_factory = user_state_summary_key
-    storage_class = XModuleUserStateSummaryField
+    storage_class = factory.FACTORY_FOR
 
 
 class TestStudentPrefsStorage(OtherUserFailureTestMixin, StorageTestBase, TestCase):

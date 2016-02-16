@@ -12,14 +12,16 @@ class Command(BaseCommand):
     """ manage.py commands to manage SAML/Shibboleth SSO """
     help = '''Configure/maintain/update SAML-based SSO'''
 
-    def add_arguments(self, parser):
-        parser.add_argument('--pull', action='store_true', help="Pull updated metadata from external IDPs")
-
     def handle(self, *args, **options):
+        if len(args) != 1:
+            raise CommandError("saml requires one argument: pull")
+
         if not SAMLConfiguration.is_enabled():
             raise CommandError("SAML support is disabled via SAMLConfiguration.")
 
-        if options['pull']:
+        subcommand = args[0]
+
+        if subcommand == "pull":
             log_handler = logging.StreamHandler(self.stdout)
             log_handler.setLevel(logging.DEBUG)
             log = logging.getLogger('third_party_auth.tasks')

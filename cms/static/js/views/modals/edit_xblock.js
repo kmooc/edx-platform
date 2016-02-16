@@ -3,7 +3,7 @@
  * It is invoked using the edit method which is passed an existing rendered xblock,
  * and upon save an optional refresh function can be invoked to update the display.
  */
-define(["jquery", "underscore", "gettext", "js/views/modals/base_modal", "common/js/components/utils/view_utils",
+define(["jquery", "underscore", "gettext", "js/views/modals/base_modal", "js/views/utils/view_utils",
     "js/models/xblock_info", "js/views/xblock_editor"],
     function($, _, gettext, BaseModal, ViewUtils, XBlockInfo, XBlockEditorView) {
         "strict mode";
@@ -118,11 +118,12 @@ define(["jquery", "underscore", "gettext", "js/views/modals/base_modal", "common
             },
 
             getTitle: function() {
-                var displayName = this.xblockInfo.get('display_name');
-                if (!displayName) {
-                    displayName = gettext('Component');
+                var value = this.xblockInfo.get('display_name');
+                //value = value.replace(/<script/gi,"<noscript").replace(/\/script/gi,"\/noscript");
+                if (!value) {
+                    value = gettext('Component');
                 }
-                return interpolate(this.options.titleFormat, { title: displayName }, true);
+                return interpolate(this.options.titleFormat, { title: value }, true);
             },
 
             addDefaultModes: function() {
@@ -160,6 +161,21 @@ define(["jquery", "underscore", "gettext", "js/views/modals/base_modal", "common
                     data = editorView.getXBlockFieldData();
                 event.preventDefault();
                 if (data) {
+
+                    /*
+                    if(data.data){
+                        var value = data.data;
+                        value = value.replace(/<script/gi,"<noscript").replace(/\/script/gi,"\/noscript");
+                        data.data = value;
+                    }
+
+                    if(data.metadata.display_name){
+                        var value = data.metadata.display_name;
+                        value = value.replace(/<script/gi,"<noscript").replace(/\/script/gi,"\/noscript");
+                        data.metadata.display_name = value;
+                    }
+                    */
+
                     ViewUtils.runOperationShowingMessage(gettext('Saving'),
                         function() {
                             return xblockInfo.save(data);

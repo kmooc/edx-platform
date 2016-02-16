@@ -82,6 +82,9 @@
 
 .header-app {
 
+    .logo {
+        @extend %reset-link;
+    }
 }
 
 // ------------------------------
@@ -113,15 +116,9 @@
 
     .message-actions .action {
 
-        // STATE: hover, active, focus
-        &:hover, &:active, &:focus {
-            // customizations from UXPL
-           color: palette(grayscale-cool, x-dark);
-        }
-
         .icon {
             @include margin-right(spacing-horizontal(x-small));
-            font-size: font-size(large);
+            font-size: font-size(mid-large);
         }
 
         // CASE: icon display only
@@ -312,7 +309,6 @@
         .signatory-credentials {
 
             .role, .organization {
-                white-space: pre-line;
                 display: block;
             }
         }
@@ -460,14 +456,15 @@
 }
 
 // certificate - base + honor
-.layout-accomplishment.certificate-honor {
+.layout-accomplishment.certificate-honor,
+.layout-accomplishment.certificate-base {
 
     .introduction {
         margin-bottom: 0;
     }
 
     .accomplishment-main {
-        background: transparentize(palette(grayscale-cool, dark), 0.9);
+        background: transparentize($cert-base-color, 0.9);
     }
 
     .accomplishment-rendering {
@@ -485,18 +482,19 @@
 }
 
 // certificate - distinguished + verified
-.layout-accomplishment.certificate-verified {
+.layout-accomplishment.certificate-verified,
+.layout-accomplishment.certificate-distinguished {
 
     .introduction {
         margin-bottom: spacing-vertical(base);
     }
 
     .accomplishment-main {
-        background: transparentize(palette(primary, accent), 0.9);
+        background: transparentize($cert-distinguished-color, 0.9);
     }
 
     .accomplishment-rendering {
-        background: palette(grayscale, white-t) url('../images/bg-verified.png') center no-repeat;
+        background: palette(grayscale, white-t) url('../images/bg-distinguished.png') center no-repeat;
         background-size: 65%;
 
         .deco-corner-tl {

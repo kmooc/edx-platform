@@ -10,7 +10,7 @@ from survey.models import SurveyForm
 class SurveyFormAdminForm(forms.ModelForm):
     """Form providing validation of SurveyForm content."""
 
-    class Meta(object):
+    class Meta(object):  # pylint: disable=missing-docstring
         model = SurveyForm
         fields = ('name', 'form')
 

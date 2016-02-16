@@ -5,14 +5,20 @@
 
 // NOTE: This is the left to right (LTR) configured style compile. It should mirror main-rtl w/ the exception of bi-app references.
 
+// ------------------------------
+// #VENDOR
+// ------------------------------
+@import '../../../../static/vendor/bourbon/bourbon';
+@import '../../../../static/vendor/susy/susy';
+@import '../../../../static/vendor/breakpoint/breakpoint';
+@import '../../../../static/vendor/bi-app/bi-app-ltr';   // LTR support
 
 // ------------------------------
-// #CONFIG - layout direction
+// #UTILITIES
 // ------------------------------
-@import 'ltr';                        // LTR-specifc settings and utilities
-
+@import '../../../../static/pattern-library/sass/utilities/variables-ltr';
 
 // ------------------------------
 // #BUILD
 // ------------------------------
-@import 'build';                     // shared compile/build order for both LTR and RTL UI
+@import 'build';                                         // shared compile/build order for both LTR and RTL UI

@@ -13,8 +13,6 @@ from model_utils.models import TimeStampedModel
 
 from survey.exceptions import SurveyFormNameAlreadyExists, SurveyFormNotFound
 
-from xmodule_django.models import CourseKeyField
-
 log = logging.getLogger("edx.survey")
 
 
@@ -106,7 +104,7 @@ class SurveyForm(TimeStampedModel):
         """
         return SurveyAnswer.do_survey_answers_exist(self, user)
 
-    def save_user_answers(self, user, answers, course_key):
+    def save_user_answers(self, user, answers):
         """
         Store answers to the form for a given user. Answers is a dict of simple
         name/value pairs
@@ -114,16 +112,7 @@ class SurveyForm(TimeStampedModel):
         IMPORTANT: There is no validaton of form answers at this point. All data
         supplied to this method is presumed to be previously validated
         """
-
-        # first remove any answer the user might have done before
-        self.clear_user_answers(user)
-        SurveyAnswer.save_answers(self, user, answers, course_key)
-
-    def clear_user_answers(self, user):
-        """
-        Removes all answers that a user has submitted
-        """
-        SurveyAnswer.objects.filter(form=self, user=user).delete()
+        SurveyAnswer.save_answers(self, user, answers)
 
     def get_field_names(self):
         """
@@ -146,10 +135,7 @@ class SurveyForm(TimeStampedModel):
         # NOTE: This wrapping doesn't change the ability to query it
         tree = etree.fromstring(u'<div>{}</div>'.format(html))
 
-        input_fields = (
-            tree.findall('.//input') + tree.findall('.//select') +
-            tree.findall('.//textarea')
-        )
+        input_fields = tree.findall('.//input') + tree.findall('.//select')
 
         for input_field in input_fields:
             if 'name' in input_field.keys() and input_field.attrib['name'] not in names:
@@ -166,10 +152,6 @@ class SurveyAnswer(TimeStampedModel):
     form = models.ForeignKey(SurveyForm, db_index=True)
     field_name = models.CharField(max_length=255, db_index=True)
     field_value = models.CharField(max_length=1024)
-
-    # adding the course_id where the end-user answered the survey question
-    # since it didn't exist in the beginning, it is nullable
-    course_key = CourseKeyField(max_length=255, db_index=True, null=True)
 
     @classmethod
     def do_survey_answers_exist(cls, form, user):
@@ -223,7 +205,7 @@ class SurveyAnswer(TimeStampedModel):
         return results
 
     @classmethod
-    def save_answers(cls, form, user, answers, course_key):
+    def save_answers(cls, form, user, answers):
         """
         Store answers to the form for a given user. Answers is a dict of simple
         name/value pairs
@@ -237,20 +219,6 @@ class SurveyAnswer(TimeStampedModel):
             # See if there is an answer stored for this user, form, field_name pair or not
             # this will allow for update cases. This does include an additional lookup,
             # but write operations will be relatively infrequent
-            value = answers[name]
-            defaults = {"field_value": value}
-            if course_key:
-                defaults['course_key'] = course_key
-
-            answer, created = SurveyAnswer.objects.get_or_create(
-                user=user,
-                form=form,
-                field_name=name,
-                defaults=defaults
-            )
-
-            if not created:
-                # Allow for update cases.
-                answer.field_value = value
-                answer.course_key = course_key
-                answer.save()
+            answer, __ = SurveyAnswer.objects.get_or_create(user=user, form=form, field_name=name)
+            answer.field_value = value
+            answer.save()

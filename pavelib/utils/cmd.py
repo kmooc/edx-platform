@@ -7,7 +7,7 @@ def cmd(*args):
     """
     Concatenate the arguments into a space-separated shell command.
     """
-    return " ".join(str(arg) for arg in args if arg)
+    return " ".join([str(arg) for arg in args])
 
 
 def django_cmd(sys, settings, *args):

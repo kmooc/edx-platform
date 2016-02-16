@@ -113,5 +113,6 @@ class DummyBackend(BaseBackend):
         self.flag = options.get('flag', False)
         self.count = 0
 
+    # pylint: disable=unused-argument
     def send(self, event):
         self.count += 1

@@ -4,8 +4,8 @@ Tests for credit courses on the student dashboard.
 import unittest
 import datetime
 
-from mock import patch
 import pytz
+from mock import patch
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
@@ -86,8 +86,7 @@ class CreditCourseDashboardTest(ModuleStoreTestCase):
     def test_not_eligible_for_credit(self):
         # The user is not yet eligible for credit, so no additional information should be displayed on the dashboard.
         response = self._load_dashboard()
-        self.assertNotContains(response, "credit-eligibility-msg")
-        self.assertNotContains(response, "purchase-credit-btn")
+        self.assertNotContains(response, "credit")
 
     def test_eligible_for_credit(self):
         # Simulate that the user has completed the only requirement in the course
@@ -109,6 +108,7 @@ class CreditCourseDashboardTest(ModuleStoreTestCase):
         response = self._load_dashboard()
         self.assertContains(response, "credit-eligibility-msg")
         self.assertContains(response, "purchase-credit-btn")
+        self.assertContains(response, "purchase credit for this course expires")
 
     def test_purchased_credit(self):
         # Simulate that the user has purchased credit, but has not
@@ -116,8 +116,9 @@ class CreditCourseDashboardTest(ModuleStoreTestCase):
         self._make_eligible()
         self._purchase_credit()
 
+        # Expect that the user's status is "pending"
         response = self._load_dashboard()
-        self.assertContains(response, "credit-request-not-started-msg")
+        self.assertContains(response, "credit-request-pending-msg")
 
     def test_purchased_credit_and_request_pending(self):
         # Simulate that the user has purchased credit and initiated a request,

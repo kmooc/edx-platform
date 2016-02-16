@@ -68,7 +68,7 @@
 
 //Styles for Error messages
 %error-message-colors {
-  background: $error-color;
+  background: $error-red;
   border: 1px solid rgb(202, 17, 17);
   color: rgb(143, 14, 14);
 }
@@ -98,24 +98,6 @@
 
   &:focus {
     // outline: thin dotted !important;
-  }
-}
-
-// light button reset
-%ui-clear-button  {
-  background: none;
-  border-radius: ($baseline/4);
-  box-shadow: none;
-  text-shadow: none;
-
-  &:hover {
-    background-image: none;
-    box-shadow: none;
-  }
-
-  &:focus,
-  &:active {
-    box-shadow: none;
   }
 }
 

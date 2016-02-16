@@ -9,8 +9,7 @@ from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 
 class InstructorTaskFactory(DjangoModelFactory):
-    class Meta(object):
-        model = InstructorTask
+    FACTORY_FOR = InstructorTask
 
     task_type = 'rescore_problem'
     course_id = SlashSeparatedCourseKey("MITx", "999", "Robot_Super_Course")

@@ -1,8 +1,6 @@
 """
 Namespace that defines fields common to all blocks used in the LMS
 """
-
-#from django.utils.translation import ugettext_noop as _
 from lazy import lazy
 
 from xblock.fields import Boolean, Scope, String, XBlockMixin, Dict
@@ -10,8 +8,7 @@ from xblock.validation import ValidationMessage
 from xmodule.modulestore.inheritance import UserPartitionList
 from xmodule.partitions.partitions import NoSuchUserPartitionError, NoSuchUserPartitionGroupError
 
-# Please do not remove, this is a workaround for Django 1.8.
-# more information can be found here: https://openedx.atlassian.net/browse/PLAT-902
+# Make '_' a no-op so we can scrape strings
 _ = lambda text: text
 
 
@@ -42,9 +39,7 @@ class LmsBlockMixin(XBlockMixin):
         scope=Scope.settings,
     )
     chrome = String(
-        display_name=_("Course Chrome"),
-        # Translators: DO NOT translate the words in quotes here, they are
-        # specific words for the acceptable values.
+        display_name=_("Courseware Chrome"),
         help=_("Enter the chrome, or navigation tools, to use for the XBlock in the LMS. Valid values are: \n"
                "\"chromeless\" -- to not use tabs or the accordion; \n"
                "\"tabs\" -- to use tabs only; \n"
@@ -55,7 +50,7 @@ class LmsBlockMixin(XBlockMixin):
     )
     default_tab = String(
         display_name=_("Default Tab"),
-        help=_("Enter the tab that is selected in the XBlock. If not set, the Course tab is selected."),
+        help=_("Enter the tab that is selected in the XBlock. If not set, the Courseware tab is selected."),
         scope=Scope.settings,
         default=None,
     )
@@ -64,6 +59,11 @@ class LmsBlockMixin(XBlockMixin):
         help=_("Enter the source file name for LaTeX."),
         scope=Scope.settings,
         deprecated=True
+    )
+    ispublic = Boolean(
+        display_name=_("Course Is Public"),
+        help=_("Enter true or false. If true, the course is open to the public. If false, the course is open only to admins."),
+        scope=Scope.settings
     )
     visible_to_staff_only = Boolean(
         help=_("If true, can be seen only by course staff, regardless of start date."),
@@ -141,7 +141,7 @@ class LmsBlockMixin(XBlockMixin):
         """
         Validates the state of this xblock instance.
         """
-        _ = self.runtime.service(self, "i18n").ugettext
+        _ = self.runtime.service(self, "i18n").ugettext  # pylint: disable=redefined-outer-name
         validation = super(LmsBlockMixin, self).validate()
         has_invalid_user_partitions = False
         has_invalid_groups = False
@@ -151,13 +151,11 @@ class LmsBlockMixin(XBlockMixin):
             except NoSuchUserPartitionError:
                 has_invalid_user_partitions = True
             else:
-                # Skip the validation check if the partition has been disabled
-                if user_partition.active:
-                    for group_id in group_ids:
-                        try:
-                            user_partition.get_group(group_id)
-                        except NoSuchUserPartitionGroupError:
-                            has_invalid_groups = True
+                for group_id in group_ids:
+                    try:
+                        user_partition.get_group(group_id)
+                    except NoSuchUserPartitionGroupError:
+                        has_invalid_groups = True
 
         if has_invalid_user_partitions:
             validation.add(

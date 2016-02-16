@@ -14,12 +14,6 @@ class @DiscussionViewSpecHelper
           body: "",
           title: "dummy title",
           created_at: "2014-08-18T01:02:03Z"
-          ability: {
-              can_delete: false,
-              can_reply: true,
-              can_vote: false,
-              editable: false,
-            }
         }
         $.extend(thread, props)
 
@@ -78,7 +72,7 @@ class @DiscussionViewSpecHelper
         spy.reset()
         button.trigger($.Event("keydown", {which: 32}))
         expect(spy).toHaveBeenCalled()
-
+        
     @checkVoteButtonEvents = (view) ->
         @checkButtonEvents(view, "toggleVote", ".action-vote")
 

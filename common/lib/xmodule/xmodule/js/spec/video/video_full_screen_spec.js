@@ -30,6 +30,8 @@
                 var fullScreenControl = $('.add-fullscreen');
 
                 expect(fullScreenControl).toHaveAttrs({
+                    'role': 'button',
+                    'title': 'Fill browser',
                     'aria-disabled': 'false'
                 });
             });
@@ -51,10 +53,14 @@
                 var fullScreenControl = $('.add-fullscreen');
                 fullScreenControl.click();
                 expect(fullScreenControl).toHaveAttrs({
+                    'role': 'button',
+                    'title': 'Exit full browser',
                     'aria-disabled': 'false'
                 });
                 fullScreenControl.click();
                 expect(fullScreenControl).toHaveAttrs({
+                    'role': 'button',
+                    'title': 'Fill browser',
                     'aria-disabled': 'false'
                 });
             });

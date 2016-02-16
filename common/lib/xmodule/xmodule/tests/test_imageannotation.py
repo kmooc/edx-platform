@@ -87,19 +87,8 @@ class ImageAnnotationModuleTestCase(unittest.TestCase):
 
     def test_student_view(self):
         """
-        Tests the function that passes in all the information in the context
-        that will be used in templates/imageannotation.html
+        Tests the function that passes in all the information in the context that will be used in templates/textannotation.html
         """
         context = self.mod.student_view({}).content
-
-        for key in ['display_name',
-                    'instructions_html',
-                    'annotation_storage',
-                    'token',
-                    'tag',
-                    'openseadragonjson',
-                    'default_tab',
-                    'instructor_email',
-                    'annotation_mode',
-                    'is_course_staff']:
+        for key in ['display_name', 'instructions_html', 'annotation_storage', 'token', 'tag', 'openseadragonjson', 'default_tab', 'instructor_email', 'annotation_mode', 'is_course_staff']:
             self.assertIn(key, context)

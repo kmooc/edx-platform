@@ -1,39 +1,44 @@
-;(function (define) {
+var edx = edx || {};
+
+(function($, Backbone) {
     'use strict';
-    define(['jquery', 'backbone'],
-        function($, Backbone) {
 
-        return Backbone.Model.extend({
-            defaults: {
-                email: ''
-            },
-            ajaxType: '',
-            urlRoot: '',
+    edx.student = edx.student || {};
+    edx.student.account = edx.student.account || {};
 
-            initialize: function( attributes, options ) {
-                this.ajaxType = options.method;
-                this.urlRoot = options.url;
-            },
+    edx.student.account.PasswordResetModel = Backbone.Model.extend({
 
-            sync: function( method, model ) {
-                var headers = {
-                    'X-CSRFToken': $.cookie('csrftoken')
-                };
+        defaults: {
+            email: ''
+        },
 
-                // Only expects an email address.
-                $.ajax({
-                    url: model.urlRoot,
-                    type: model.ajaxType,
-                    data: model.attributes,
-                    headers: headers,
-                    success: function() {
-                        model.trigger('sync');
-                    },
-                    error: function( error ) {
-                        model.trigger('error', error);
-                    }
-                });
-            }
-        });
+        ajaxType: '',
+
+        urlRoot: '',
+
+        initialize: function( attributes, options ) {
+            this.ajaxType = options.method;
+            this.urlRoot = options.url;
+        },
+
+        sync: function( method, model ) {
+            var headers = {
+                'X-CSRFToken': $.cookie('csrftoken')
+            };
+
+            // Only expects an email address.
+            $.ajax({
+                url: model.urlRoot,
+                type: model.ajaxType,
+                data: model.attributes,
+                headers: headers,
+                success: function() {
+                    model.trigger('sync');
+                },
+                error: function( error ) {
+                    model.trigger('error', error);
+                }
+            });
+        }
     });
-}).call(this, define || RequireJS.define);
+})(jQuery, Backbone);

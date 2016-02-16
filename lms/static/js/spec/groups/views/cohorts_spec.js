@@ -240,15 +240,15 @@ define(['backbone', 'jquery', 'common/js/spec_helpers/ajax_helpers', 'common/js/
                     )
                 );
                 assignmentType = assignmentType || MOCK_MANUAL_ASSIGNMENT;
-                var manualMessage = "Learners are added to this cohort only when you provide their email addresses " +
-                    "or usernames on this page.";
-                var randomMessage = "Learners are added to this cohort automatically.";
+                var manualMessage = "Students are added to this cohort only when you provide their email addresses or usernames on this page.";
+                var randomMessage = "Students are added to this cohort automatically.";
                 var message = (assignmentType == MOCK_MANUAL_ASSIGNMENT) ? manualMessage : randomMessage;
                 expect(header.find('.cohort-management-group-setup .setup-value').text().trim().split('\n')[0]).toBe(message);
             };
 
             saveFormAndExpectErrors = function(action, errors) {
-                var form, expectedTitle;
+                var requestCount = requests.length,
+                    form, expectedTitle;
                 if (action === 'add') {
                     expectedTitle = 'The cohort cannot be added';
                     form = getAddModal();
@@ -257,7 +257,7 @@ define(['backbone', 'jquery', 'common/js/spec_helpers/ajax_helpers', 'common/js/
                     form = cohortsView.$('.cohort-management-settings-form');
                 }
                 form.find('.action-save').click();
-                AjaxHelpers.expectNoRequests(requests);
+                expect(requests.length).toBe(requestCount);
                 verifyDetailedMessage(expectedTitle, 'error', errors);
             };
 
@@ -706,7 +706,7 @@ define(['backbone', 'jquery', 'common/js/spec_helpers/ajax_helpers', 'common/js/
                 it('shows an error when adding with no students specified', function() {
                     createCohortsView(this, {selectCohort: 1});
                     addStudents('    ');
-                    AjaxHelpers.expectNoRequests(requests);
+                    expect(requests.length).toBe(0);
                     verifyMessage('Enter a username or email.', 'error');
                     expect(getStudentInput().val()).toBe('');
                 });

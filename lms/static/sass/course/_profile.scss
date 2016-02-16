@@ -187,16 +187,14 @@
       > .credit-eligibility-container {
           padding: lh();
         > .credit-help {
-          display: inline-block;
           background: $blue;
           color: $white;
-          width: lh(0.6);
+          width: lh();
           margin: 0;
           padding: 0;
           border-radius: lh(0.9);
           border-color: $white;
           text-shadow: None;
-          @include padding-left(0.2em);
         }
         > .detail-collapse{
           border: none;
@@ -286,17 +284,17 @@
             }
 
             h3 {
-              color: $gray-d1;
+              color: #666;
 
               span {
-                color: $gray-d2;
+                color: #999;
                 font-size: em(14);
                 font-weight: 100;
               }
             }
 
             p {
-              color: $gray-d2;;
+              color: #999;
               font-size: em(14);
             }
 

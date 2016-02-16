@@ -4,8 +4,8 @@ define([
     'js/views/group_configuration_details', 'js/views/group_configurations_list', 'js/views/group_configuration_editor',
     'js/views/group_configuration_item', 'js/views/experiment_group_edit', 'js/views/content_group_list',
     'js/views/content_group_details', 'js/views/content_group_editor', 'js/views/content_group_item',
-    'common/js/components/views/feedback_notification', 'common/js/spec_helpers/ajax_helpers', 'common/js/spec_helpers/template_helpers',
-    'common/js/spec_helpers/view_helpers', 'jasmine-stealth'
+    'js/views/feedback_notification', 'common/js/spec_helpers/ajax_helpers', 'common/js/spec_helpers/template_helpers',
+    'js/spec_helpers/view_helpers', 'jasmine-stealth'
 ], function(
     _, Course, GroupConfigurationModel, GroupModel, GroupConfigurationCollection, GroupCollection,
     GroupConfigurationDetailsView, GroupConfigurationsListView, GroupConfigurationEditorView,
@@ -443,19 +443,19 @@ define([
                 'Group Configuration name is required'
             );
             // No request
-            AjaxHelpers.expectNoRequests(requests);
+            expect(requests.length).toBe(0);
             // Set correct value
             setValuesToInputs(this.view, { inputName: 'New Configuration' });
             // Try to save
             this.view.$('form').submit();
-            AjaxHelpers.respondWithJson(requests, {});
+            requests[0].respond(200);
             // Model is updated
             expect(this.model).toBeCorrectValuesInModel({
                 name: 'New Configuration'
             });
             // Error message disappear
             expect(this.view.$(SELECTORS.errorMessage)).not.toExist();
-            AjaxHelpers.expectNoRequests(requests);
+            expect(requests.length).toBe(1);
         });
 
         it('should have appropriate class names on focus/blur', function () {
@@ -733,9 +733,9 @@ define([
         };
 
         respondToSave = function(requests, view) {
-            var request = AjaxHelpers.currentRequest(requests);
-            expect(request.method).toBe('POST');
-            expect(request.url).toBe('/mock_url/0');
+            expect(requests.length).toBe(1);
+            expect(requests[0].method).toBe('POST');
+            expect(requests[0].url).toBe('/mock_url/0');
             AjaxHelpers.respondWithJson(requests, {
                 name: 'Content Group Configuration',
                 groups: view.collection.map(function(groupModel, index) {
@@ -803,7 +803,7 @@ define([
                 newGroupName = 'New Group Name',
                 view = renderView();
             editNewGroup(view, {newName: newGroupName, cancel: true});
-            AjaxHelpers.expectNoRequests(requests);
+            expect(requests.length).toBe(0);
             verifyEditingGroup(view, false);
             expect(view.$()).not.toContainText(newGroupName);
         });
@@ -814,7 +814,7 @@ define([
                 view = renderView([originalGroupName]);
             editExistingGroup(view, {newName: 'New Group Name', cancel: true});
             verifyEditingGroup(view, false);
-            AjaxHelpers.expectNoRequests(requests);
+            expect(requests.length).toBe(0);
             expect(view.collection.at(0).get('name')).toBe(originalGroupName);
         });
 
@@ -823,7 +823,7 @@ define([
                 newGroupName = 'New Group Name',
                 view = renderView();
             editNewGroup(view, {newName: '', save: true});
-            AjaxHelpers.expectNoRequests(requests);
+            expect(requests.length).toBe(0);
             correctValidationError(view, requests, newGroupName);
         });
 
@@ -832,7 +832,7 @@ define([
                 oldGroupName = 'Old Group Name',
                 view = renderView([oldGroupName]);
             editExistingGroup(view, {newName: '', save: true});
-            AjaxHelpers.expectNoRequests(requests);
+            expect(requests.length).toBe(0);
             correctValidationError(view, requests, oldGroupName);
         });
 

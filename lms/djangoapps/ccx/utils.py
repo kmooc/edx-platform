@@ -3,260 +3,275 @@ CCX Enrollment operations for use by Coach APIs.
 
 Does not include any access control, be sure to check access before calling.
 """
-import datetime
 import logging
-import pytz
-from contextlib import contextmanager
-
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext as _
-from django.core.validators import validate_email
+from django.conf import settings
+from django.core.urlresolvers import reverse
+from django.core.mail import send_mail
+from edxmako.shortcuts import render_to_string  # pylint: disable=import-error
+from microsite_configuration import microsite  # pylint: disable=import-error
+from xmodule.modulestore.django import modulestore
+from xmodule.error_module import ErrorDescriptor
+from ccx_keys.locator import CCXLocator
 
-from courseware.courses import get_course_by_id
-from courseware.model_data import FieldDataCache
-from courseware.module_render import get_module_for_descriptor
-from instructor.enrollment import (
-    enroll_email,
-    unenroll_email,
+from .models import (
+    CcxMembership,
+    CcxFutureMembership,
 )
-from instructor.access import allow_access
-from instructor.views.tools import get_student_from_identifier
-from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
-from student.models import CourseEnrollment
-from student.roles import CourseCcxCoachRole
 
-from lms.djangoapps.ccx.models import CustomCourseForEdX
-from lms.djangoapps.ccx.overrides import get_override_for_ccx
-from lms.djangoapps.ccx.custom_exception import CCXUserValidationException
 
 log = logging.getLogger("edx.ccx")
 
 
-def get_ccx_from_ccx_locator(course_id):
-    """ helper function to allow querying ccx fields from templates """
-    ccx_id = getattr(course_id, 'ccx', None)
-    ccx = None
-    if ccx_id:
-        ccx = CustomCourseForEdX.objects.filter(id=ccx_id)
-    if not ccx:
-        log.warning(
-            "CCX does not exist for course with id %s",
-            course_id
+class EmailEnrollmentState(object):
+    """ Store the complete enrollment state of an email in a class """
+    def __init__(self, ccx, email):
+        exists_user = User.objects.filter(email=email).exists()
+        if exists_user:
+            user = User.objects.get(email=email)
+            ccx_member = CcxMembership.objects.filter(ccx=ccx, student=user)
+            in_ccx = ccx_member.exists()
+            full_name = user.profile.name
+        else:
+            user = None
+            in_ccx = False
+            full_name = None
+        self.user = exists_user
+        self.member = user
+        self.full_name = full_name
+        self.in_ccx = in_ccx
+
+    def __repr__(self):
+        return "{}(user={}, member={}, in_ccx={})".format(
+            self.__class__.__name__,
+            self.user,
+            self.member,
+            self.in_ccx,
         )
-        return None
-    return ccx[0]
+
+    def to_dict(self):
+        """ return dict with membership and ccx info """
+        return {
+            'user': self.user,
+            'member': self.member,
+            'in_ccx': self.in_ccx,
+        }
 
 
-def get_date(ccx, node, date_type=None, parent_node=None):
+def enroll_email(ccx, student_email, auto_enroll=False, email_students=False, email_params=None):
     """
-    This returns override or master date for section, subsection or a unit.
-
-    :param ccx: ccx instance
-    :param node: chapter, subsection or unit
-    :param date_type: start or due
-    :param parent_node: parent of node
-    :return: start or due date
+    Send email to newly enrolled student
     """
-    date = get_override_for_ccx(ccx, node, date_type, None)
-    if date_type == "start":
-        master_date = node.start
+    if email_params is None:
+        email_params = get_email_params(ccx, True)
+    previous_state = EmailEnrollmentState(ccx, student_email)
+
+    if previous_state.user:
+        user = User.objects.get(email=student_email)
+        if not previous_state.in_ccx:
+            membership = CcxMembership(
+                ccx=ccx, student=user, active=True
+            )
+            membership.save()
+        elif auto_enroll:
+            # activate existing memberships
+            membership = CcxMembership.objects.get(student=user, ccx=ccx)
+            membership.active = True
+            membership.save()
+        if email_students:
+            email_params['message'] = 'enrolled_enroll'
+            email_params['email_address'] = student_email
+            email_params['full_name'] = previous_state.full_name
+            send_mail_to_student(student_email, email_params)
     else:
-        master_date = node.due
+        membership = CcxFutureMembership(
+            ccx=ccx, auto_enroll=auto_enroll, email=student_email
+        )
+        membership.save()
+        if email_students:
+            email_params['message'] = 'allowed_enroll'
+            email_params['email_address'] = student_email
+            send_mail_to_student(student_email, email_params)
 
-    if date is not None:
-        # Setting override date [start or due]
-        date = date.strftime('%Y-%m-%d %H:%M')
-    elif not parent_node and master_date is not None:
-        # Setting date from master course
-        date = master_date.strftime('%Y-%m-%d %H:%M')
-    elif parent_node is not None:
-        # Set parent date (vertical has same dates as subsections)
-        date = get_date(ccx, node=parent_node, date_type=date_type)
+    after_state = EmailEnrollmentState(ccx, student_email)
 
-    return date
+    return previous_state, after_state
 
 
-def validate_date(year, month, day, hour, minute):
+def unenroll_email(ccx, student_email, email_students=False, email_params=None):
     """
-    avoid corrupting db if bad dates come in
+    send email to unenrolled students
     """
-    valid = True
-    if year < 0:
-        valid = False
-    if month < 1 or month > 12:
-        valid = False
-    if day < 1 or day > 31:
-        valid = False
-    if hour < 0 or hour > 23:
-        valid = False
-    if minute < 0 or minute > 59:
-        valid = False
-    return valid
+    if email_params is None:
+        email_params = get_email_params(ccx, True)
+    previous_state = EmailEnrollmentState(ccx, student_email)
+
+    if previous_state.in_ccx:
+        CcxMembership.objects.get(
+            ccx=ccx, student=previous_state.member
+        ).delete()
+        if email_students:
+            email_params['message'] = 'enrolled_unenroll'
+            email_params['email_address'] = student_email
+            email_params['full_name'] = previous_state.full_name
+            send_mail_to_student(student_email, email_params)
+    else:
+        if CcxFutureMembership.objects.filter(
+                ccx=ccx, email=student_email).exists():
+            CcxFutureMembership.objects.get(
+                ccx=ccx, email=student_email
+            ).delete()
+        if email_students:
+            email_params['message'] = 'allowed_unenroll'
+            email_params['email_address'] = student_email
+            send_mail_to_student(student_email, email_params)
+
+    after_state = EmailEnrollmentState(ccx, student_email)
+
+    return previous_state, after_state
 
 
-def parse_date(datestring):
+def get_email_params(ccx, auto_enroll, secure=True):
     """
-    Generate a UTC datetime.datetime object from a string of the form
-    'YYYY-MM-DD HH:MM'.  If string is empty or `None`, returns `None`.
+    get parameters for enrollment emails
     """
-    if datestring:
-        date, time = datestring.split(' ')
-        year, month, day = map(int, date.split('-'))
-        hour, minute = map(int, time.split(':'))
-        if validate_date(year, month, day, hour, minute):
-            return datetime.datetime(
-                year, month, day, hour, minute, tzinfo=pytz.UTC)
+    protocol = 'https' if secure else 'http'
 
-    return None
-
-
-def get_ccx_for_coach(course, coach):
-    """
-    Looks to see if user is coach of a CCX for this course.  Returns the CCX or
-    None.
-    """
-    ccxs = CustomCourseForEdX.objects.filter(
-        course_id=course.id,
-        coach=coach
+    stripped_site_name = microsite.get_value(
+        'SITE_NAME',
+        settings.SITE_NAME
     )
-    # XXX: In the future, it would be nice to support more than one ccx per
-    # coach per course.  This is a place where that might happen.
-    if ccxs.exists():
-        return ccxs[0]
-    return None
-
-
-def get_valid_student_email(identifier):
-    """
-    Helper function to get an user email from an identifier and validate it.
-
-    In the UI a Coach can enroll users using both an email and an username.
-    This function takes care of:
-    - in case the identifier is an username, extracting the user object from
-        the DB and then the associated email
-    - validating the email
-
-    Arguments:
-        identifier (str): Username or email of the user to enroll
-
-    Returns:
-        str: A validated email for the user to enroll
-
-    Raises:
-        CCXUserValidationException: if the username is not found or the email
-            is not valid.
-    """
-    user = email = None
-    try:
-        user = get_student_from_identifier(identifier)
-    except User.DoesNotExist:
-        email = identifier
-    else:
-        email = user.email
-    try:
-        validate_email(email)
-    except ValidationError:
-        raise CCXUserValidationException('Could not find a user with name or email "{0}" '.format(identifier))
-    return email
-
-
-def ccx_students_enrolling_center(action, identifiers, email_students, course_key, email_params):
-    """
-    Function to enroll/add or unenroll/revoke students.
-
-    This function exists for backwards compatibility: in CCX there are
-    two different views to manage students that used to implement
-    a different logic. Now the logic has been reconciled at the point that
-    this function can be used by both.
-    The two different views can be merged after some UI refactoring.
-
-    Arguments:
-        action (str): type of action to perform (add, Enroll, revoke, Unenroll)
-        identifiers (list): list of students username/email
-        email_students (bool): Flag to send an email to students
-        course_key (CCXLocator): a CCX course key
-        email_params (dict): dictionary of settings for the email to be sent
-
-    Returns:
-        list: list of error
-    """
-    errors = []
-
-    if action == 'Enroll' or action == 'add':
-        ccx_course_overview = CourseOverview.get_from_id(course_key)
-        for identifier in identifiers:
-            if CourseEnrollment.objects.is_course_full(ccx_course_overview):
-                error = _('The course is full: the limit is {max_student_enrollments_allowed}').format(
-                    max_student_enrollments_allowed=ccx_course_overview.max_student_enrollments_allowed)
-                log.info("%s", error)
-                errors.append(error)
-                break
-            try:
-                email = get_valid_student_email(identifier)
-            except CCXUserValidationException as exp:
-                log.info("%s", exp)
-                errors.append("{0}".format(exp))
-                continue
-            enroll_email(course_key, email, auto_enroll=True, email_students=email_students, email_params=email_params)
-    elif action == 'Unenroll' or action == 'revoke':
-        for identifier in identifiers:
-            try:
-                email = get_valid_student_email(identifier)
-            except CCXUserValidationException as exp:
-                log.info("%s", exp)
-                errors.append("{0}".format(exp))
-                continue
-            unenroll_email(course_key, email, email_students=email_students, email_params=email_params)
-    return errors
-
-
-def prep_course_for_grading(course, request):
-    """Set up course module for overrides to function properly"""
-    field_data_cache = FieldDataCache.cache_for_descriptor_descendents(
-        course.id, request.user, course, depth=2)
-    course = get_module_for_descriptor(
-        request.user, request, course, field_data_cache, course.id, course=course
+    registration_url = u'{proto}://{site}{path}'.format(
+        proto=protocol,
+        site=stripped_site_name,
+        path=reverse('register_user')
+    )
+    course_url = u'{proto}://{site}{path}'.format(
+        proto=protocol,
+        site=stripped_site_name,
+        path=reverse(
+            'course_root',
+            kwargs={'course_id': CCXLocator.from_course_locator(ccx.course_id, ccx.id)}
+        )
     )
 
-    course._field_data_cache = {}  # pylint: disable=protected-access
-    course.set_grading_policy(course.grading_policy)
+    course_about_url = None
+    if not settings.FEATURES.get('ENABLE_MKTG_SITE', False):
+        course_about_url = u'{proto}://{site}{path}'.format(
+            proto=protocol,
+            site=stripped_site_name,
+            path=reverse(
+                'about_course',
+                kwargs={'course_id': CCXLocator.from_course_locator(ccx.course_id, ccx.id)}
+            )
+        )
+
+    email_params = {
+        'site_name': stripped_site_name,
+        'registration_url': registration_url,
+        'course': ccx,
+        'auto_enroll': auto_enroll,
+        'course_url': course_url,
+        'course_about_url': course_about_url,
+    }
+    return email_params
 
 
-@contextmanager
-def ccx_course(ccx_locator):
-    """Create a context in which the course identified by course_locator exists
+def send_mail_to_student(student, param_dict):
     """
-    course = get_course_by_id(ccx_locator)
-    yield course
+    Check parameters, set text template and send email to student
+    """
+    if 'course' in param_dict:
+        param_dict['course_name'] = param_dict['course'].display_name
+
+    param_dict['site_name'] = microsite.get_value(
+        'SITE_NAME',
+        param_dict['site_name']
+    )
+
+    subject = None
+    message = None
+
+    message_type = param_dict['message']
+
+    email_template_dict = {
+        'allowed_enroll': (
+            'ccx/enroll_email_allowedsubject.txt',
+            'ccx/enroll_email_allowedmessage.txt'
+        ),
+        'enrolled_enroll': (
+            'ccx/enroll_email_enrolledsubject.txt',
+            'ccx/enroll_email_enrolledmessage.txt'
+        ),
+        'allowed_unenroll': (
+            'ccx/unenroll_email_subject.txt',
+            'ccx/unenroll_email_allowedmessage.txt'
+        ),
+        'enrolled_unenroll': (
+            'ccx/unenroll_email_subject.txt',
+            'ccx/unenroll_email_enrolledmessage.txt'
+        ),
+    }
+
+    subject_template, message_template = email_template_dict.get(
+        message_type, (None, None)
+    )
+    if subject_template is not None and message_template is not None:
+        subject = render_to_string(subject_template, param_dict)
+        message = render_to_string(message_template, param_dict)
+
+    if subject and message:
+        message = message.strip()
+
+        subject = ''.join(subject.splitlines())
+        from_address = microsite.get_value(
+            'email_from_address',
+            settings.DEFAULT_FROM_EMAIL
+        )
+
+        send_mail(
+            subject,
+            message,
+            from_address,
+            [student],
+            fail_silently=False
+        )
 
 
-def assign_coach_role_to_ccx(ccx_locator, user, master_course_id):
+def get_ccx_membership_triplets(user, course_org_filter, org_filter_out_set):
     """
-    Check if user has ccx_coach role on master course then assign him coach role on ccx only
-    if role is not already assigned. Because of this coach can open dashboard from master course
-    as well as ccx.
-    :param ccx_locator: CCX key
-    :param user: User to whom we want to assign role.
-    :param master_course_id: Master course key
+    Get the relevant set of (CustomCourseForEdX, CcxMembership, Course)
+    triplets to be displayed on a student's dashboard.
     """
-    coach_role_on_master_course = CourseCcxCoachRole(master_course_id)
-    # check if user has coach role on master course
-    if coach_role_on_master_course.has_user(user):
-        # Check if user has coach role on ccx.
-        role = CourseCcxCoachRole(ccx_locator)
-        if not role.has_user(user):
-            # assign user role coach on ccx
-            with ccx_course(ccx_locator) as course:
-                allow_access(course, user, "ccx_coach", send_email=False)
+    # only active memberships for now
+    for membership in CcxMembership.memberships_for_user(user):
+        ccx = membership.ccx
+        store = modulestore()
+        with store.bulk_operations(ccx.course_id):
+            course = store.get_course(ccx.course_id)
+            if course and not isinstance(course, ErrorDescriptor):
+                # if we are in a Microsite, then filter out anything that is not
+                # attributed (by ORG) to that Microsite
+                if course_org_filter and course_org_filter != course.location.org:
+                    continue
+                # Conversely, if we are not in a Microsite, then let's filter out any enrollments
+                # with courses attributed (by ORG) to Microsites
+                elif course.location.org in org_filter_out_set:
+                    continue
 
+                # If, somehow, we've got a ccx that has been created for a
+                # course with a deprecated ID, we must filter it out. Emit a
+                # warning to the log so we can clean up.
+                if course.location.deprecated:
+                    log.warning(
+                        "CCX %s exists for course %s with deprecated id",
+                        ccx,
+                        ccx.course_id
+                    )
+                    continue
 
-def is_email(identifier):
-    """
-    Checks if an `identifier` string is a valid email
-    """
-    try:
-        validate_email(identifier)
-    except ValidationError:
-        return False
-    return True
+                yield (ccx, membership, course)
+            else:
+                log.error("User {0} enrolled in {2} course {1}".format(  # pylint: disable=logging-format-interpolation
+                    user.username, ccx.course_id, "broken" if course else "non-existent"
+                ))

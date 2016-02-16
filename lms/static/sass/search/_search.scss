@@ -2,6 +2,7 @@
 
   @include box-sizing(border-box);
   position: relative;
+  padding: ($baseline/4);
 
   .search-field-wrapper {
     position: relative;
@@ -50,10 +51,8 @@
   display: none;
 
   .search-info {
-    margin-bottom: ($baseline);
     border-bottom: 4px solid $border-color-l4;
-    padding-bottom: ($baseline/2);
-
+    padding-bottom: $baseline;
     .search-count {
       @include float(right);
       color: $gray-l1;
@@ -124,8 +123,9 @@
 
 }
 
+
 .courseware-search-bar {
-   width: flex-grid(7);
+  box-shadow: 0 1px 0 $white inset, 0 -1px 0 $shadow-l1 inset;
 }
 
 
@@ -172,3 +172,6 @@
   }
 }
 
+.courseware-search-results {
+  padding: ($baseline*2);
+}

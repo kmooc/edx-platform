@@ -1,3 +1,5 @@
+#-*- coding: utf-8 -*-
+
 """ Views for a student's account information. """
 
 import logging
@@ -5,7 +7,6 @@ import json
 import urlparse
 
 from django.conf import settings
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import (
     HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
@@ -33,21 +34,182 @@ from student.views import (
 )
 from student.helpers import get_next_url_for_login_page
 import third_party_auth
-from third_party_auth import pipeline
-from third_party_auth.decorators import xframe_allow_whitelisted
+from third_party_auth import pipeline, provider
 from util.bad_request_rate_limiter import BadRequestRateLimiter
 
 from openedx.core.djangoapps.user_api.accounts.api import request_password_change
 from openedx.core.djangoapps.user_api.errors import UserNotFound
 
+from django.contrib import messages
+from django.contrib.auth import logout
+from django.contrib.auth.models import User
+import time
+from openedx.core.djangoapps.user_api.preferences.api import update_user_preferences
+from openedx.core.djangoapps.profile_images.images import remove_profile_images
+from openedx.core.djangoapps.user_api.accounts.image_helpers import get_profile_image_names, set_has_profile_image
+
+import commands
+from django.views.decorators.csrf import csrf_exempt
+from datetime import date
+from student.views import register_user
+from django.contrib.auth import authenticate
+from util.json_request import JsonResponse
+
 
 AUDIT_LOG = logging.getLogger("audit")
 
-
 @require_http_methods(['GET'])
 @ensure_csrf_cookie
-@xframe_allow_whitelisted
+def registration_gubn(request):
+    return render_to_response('student_account/registration_gubn.html')
+
+@ensure_csrf_cookie
+def agree(request):
+    print 'request.method = ', request.method
+    print "request.POST['division'] = ", request.POST['division']
+
+    if request.method == 'POST' and request.POST['division']:
+        request.session['division'] = request.POST['division']
+        print "STEP1 : request.session['division'] = ", request.session['division']
+
+        context = {
+            'division': request.session['division'],
+        }
+
+        return render_to_response('student_account/agree.html', context)
+    else:
+        return render_to_response('student_account/registration_gubn.html')
+
+
+@ensure_csrf_cookie
+def agree_done(request):
+    print 'request.is_ajax = ', request.is_ajax
+    print 'request.method = ', request.method
+    print "request.POST['division'] = ", request.POST['agreeYN']
+
+    data = {}
+
+    if request.method == 'POST' and request.POST['agreeYN'] and request.POST['agreeYN'] == 'Y':
+        # print "STEP2 :  request.session['division'] = ", request.session['division']
+        # print "STEP2 :  request.session['agreeYN'] = ", request.POST['agreeYN']
+        request.session['agreeYN'] = request.POST['agreeYN']
+
+        if request.POST['agreeYN'] == 'Y':
+            data['agreeYN'] = request.session['agreeYN']
+            data['division'] = request.session['division']
+    else:
+        data['agreeYN'] = request.POST['agreeYN']
+
+    print 'data = ', data
+
+    return HttpResponse(json.dumps(data))
+
+@csrf_exempt
+def parent_agree(request):
+
+    ## IPIN info
+    sSiteCode   = 'M231'
+    sSitePw     = '76421752'
+    sModulePath = '/edx/app/edxapp/IPINClient'
+    sCPRequest  = commands.getoutput(sModulePath + ' SEQ ' + sSiteCode)
+    sReturnURL  = 'http://www.kmooc.kr/parent_agree_done'
+    sEncData = commands.getoutput(sModulePath + ' REQ ' + sSiteCode + ' ' + sSitePw + ' ' + sCPRequest + ' ' + sReturnURL)
+
+    '''
+    print '===================================================='
+    print '1 = ', sModulePath + ' SEQ ' + sSiteCode
+    print '===================================================='
+    print '3 = ', sCPRequest
+    print '===================================================='
+    print '4 = ', sModulePath + ' REQ ' + sSiteCode + ' ' + sSitePw + ' ' + sCPRequest + ' ' + sReturnURL
+    print '===================================================='
+    print '5 = ', sEncData
+    print '===================================================='
+    '''
+
+    if sEncData == -9 :
+        sRtnMsg = '입력값 오류 : 암호화 처리시 필요한 파라미터값의 정보를 정확하게 입력해 주시기 바랍니다.'
+    else :
+        sRtnMsg = sEncData + ' 변수에 암호화 데이터가 확인되면 정상 정상이 아닌경우 리턴코드 확인 후 NICE평가정보 개발 담당자에게 문의해 주세요.'
+
+    print 'sRtnMsg = ', sRtnMsg
+
+    context = {
+        'sEncData' : sEncData,
+    }
+
+    return render_to_response('student_account/parent_agree.html', context)
+
+@csrf_exempt
+def parent_agree_done(request):
+
+    sSiteCode   = 'M231'
+    sSitePw     = '76421752'
+    sModulePath = '/edx/app/edxapp/IPINClient'
+    sEncData = request.POST['enc_data']
+
+    sDecData = commands.getoutput(sModulePath + ' RES ' + sSiteCode + ' ' + sSitePw + ' ' + sEncData)
+
+    print 'sDecData', sDecData
+
+    if sDecData:
+        val = sDecData.split('^')
+        if val[6] and len(val[6]) == 8:
+
+            print '*****************************'
+            print int(date.today().year) - int(val[6][:4])
+            print '*****************************'
+
+            if int(date.today().year) - int(val[6][:4]) < 20:
+                context = {
+                    'isAuth': 'fail',
+                    'age': int(date.today().year) - int(val[6][:4]),
+                }
+            else:
+                request.session['auth'] = 'Y'
+                context = {
+                    'isAuth' : 'succ',
+                    'age': int(date.today().year) - int(val[6][:4]),
+                }
+
+    else:
+        context = {
+            'isAuth': 'fail',
+            'age': 0,
+        }
+
+    print 'context > ', context
+
+    return render_to_response('student_account/parent_agree_done.html', context)
+
+@ensure_csrf_cookie
 def login_and_registration_form(request, initial_mode="login"):
+
+
+    division = None
+
+    if initial_mode == "login":
+        pass
+
+    elif 'division' in request.session and 'agreeYN' in request.session and 'auth' in request.session:
+        division = request.session['division']
+        del request.session['division']
+        del request.session['agreeYN']
+        del request.session['auth']
+
+    elif 'division' in request.session and 'agreeYN' in request.session:
+        division = request.session['division']
+
+        if request.session['division'] == 'N':
+            return render_to_response('student_account/registration_gubn.html')
+
+        del request.session['division']
+        del request.session['agreeYN']
+    else:
+        return render_to_response('student_account/registration_gubn.html')
+
+    print 'division = ', division
+
     """Render the combined login/registration form, defaulting to login
 
     This relies on the JS to asynchronously load the actual form from
@@ -55,7 +217,6 @@ def login_and_registration_form(request, initial_mode="login"):
 
     Keyword Args:
         initial_mode (string): Either "login" or "register".
-
     """
     # Determine the URL to redirect to following login/registration/third_party_auth
     redirect_to = get_next_url_for_login_page(request)
@@ -69,9 +230,7 @@ def login_and_registration_form(request, initial_mode="login"):
 
     # If this is a microsite, revert to the old login/registration pages.
     # We need to do this for now to support existing themes.
-    # Microsites can use the new logistration page by setting
-    # 'ENABLE_COMBINED_LOGIN_REGISTRATION' in their microsites configuration file.
-    if microsite.is_request_in_microsite() and not microsite.get_value('ENABLE_COMBINED_LOGIN_REGISTRATION', False):
+    if microsite.is_request_in_microsite():
         if initial_mode == "login":
             return old_login_view(request)
         elif initial_mode == "register":
@@ -96,27 +255,27 @@ def login_and_registration_form(request, initial_mode="login"):
             pass
 
     # Otherwise, render the combined login/registration page
-    context = {
-        'data': {
-            'login_redirect_url': redirect_to,
-            'initial_mode': initial_mode,
-            'third_party_auth': _third_party_auth_context(request, redirect_to),
-            'third_party_auth_hint': third_party_auth_hint or '',
-            'platform_name': settings.PLATFORM_NAME,
 
-            # Include form descriptions retrieved from the user API.
-            # We could have the JS client make these requests directly,
-            # but we include them in the initial page load to avoid
-            # the additional round-trip to the server.
-            'login_form_desc': json.loads(form_descriptions['login']),
-            'registration_form_desc': json.loads(form_descriptions['registration']),
-            'password_reset_form_desc': json.loads(form_descriptions['password_reset']),
-        },
-        'login_redirect_url': redirect_to,  # This gets added to the query string of the "Sign In" button in header
-        'responsive': True,
-        'allow_iframing': True,
+    third_party_auth_json = None
+    third_party_auth_json = json.dumps(_third_party_auth_context(request, redirect_to));
+
+    context = {
+        'login_redirect_url': redirect_to,  # This gets added to the query string of the "Sign In" button in the header
         'disable_courseware_js': True,
-        'disable_footer': True,
+        'initial_mode': initial_mode,
+        'third_party_auth': third_party_auth_json,
+        'third_party_auth_hint': third_party_auth_hint or '',
+        'platform_name': settings.PLATFORM_NAME,
+        'responsive': True,
+
+        # Include form descriptions retrieved from the user API.
+        # We could have the JS client make these requests directly,
+        # but we include them in the initial page load to avoid
+        # the additional round-trip to the server.
+        'login_form_desc': form_descriptions['login'],
+        'registration_form_desc': form_descriptions['registration'],
+        'password_reset_form_desc': form_descriptions['password_reset'],
+        'division': division,
     }
 
     return render_to_response('student_account/login_and_register.html', context)
@@ -194,7 +353,7 @@ def _third_party_auth_context(request, redirect_to):
     }
 
     if third_party_auth.is_enabled():
-        for enabled in third_party_auth.provider.Registry.accepting_logins():
+        for enabled in third_party_auth.provider.Registry.enabled():
             info = {
                 "id": enabled.provider_id,
                 "name": enabled.name,
@@ -215,14 +374,12 @@ def _third_party_auth_context(request, redirect_to):
         running_pipeline = pipeline.get(request)
         if running_pipeline is not None:
             current_provider = third_party_auth.provider.Registry.get_from_pipeline(running_pipeline)
+            context["currentProvider"] = current_provider.name
+            context["finishAuthUrl"] = pipeline.get_complete_url(current_provider.backend_name)
 
-            if current_provider is not None:
-                context["currentProvider"] = current_provider.name
-                context["finishAuthUrl"] = pipeline.get_complete_url(current_provider.backend_name)
-
-                if current_provider.skip_registration_form:
-                    # As a reliable way of "skipping" the registration form, we just submit it automatically
-                    context["autoSubmitRegForm"] = True
+            if current_provider.skip_registration_form:
+                # As a reliable way of "skipping" the registration form, we just submit it automatically
+                context["autoSubmitRegForm"] = True
 
         # Check for any error messages we may want to display:
         for msg in messages.get_messages(request):
@@ -301,7 +458,7 @@ def _external_auth_intercept(request, mode):
 
 @login_required
 @require_http_methods(['GET'])
-def account_settings(request):
+def account_settings_confirm(request):
     """Render the current user's account settings page.
 
     Args:
@@ -317,8 +474,82 @@ def account_settings(request):
         GET /account/settings
 
     """
-    return render_to_response('student_account/account_settings.html', account_settings_context(request))
 
+    context = {
+        'correct' : None
+    }
+
+    return render_to_response('student_account/account_settings_confirm.html', context)
+
+@login_required
+@require_http_methods(['POST'])
+def account_settings_confirm_check(request):
+    """Render the current user's account settings page.
+
+    Args:
+        request (HttpRequest)
+
+    Returns:
+        HttpResponse: 200 if the page was sent successfully
+        HttpResponse: 302 if not logged in (redirect to login page)
+        HttpResponse: 405 if using an unsupported HTTP method
+
+    Example usage:
+
+        GET /account/settings
+
+    """
+    print '********************'
+    print request.user.is_authenticated()
+    print '********************'
+    print request.user
+    print '********************'
+
+    user = authenticate(username=request.user, password=request.POST['passwd'], request=request)
+
+    if user is None:
+        request.session['passwdcheck'] = 'N'
+        return JsonResponse({
+            "success": False,
+        })
+    else:
+        request.session['passwdcheck'] = 'Y'
+        return JsonResponse({
+            "success": True,
+        })
+
+@login_required
+@require_http_methods(['GET'])
+def account_settings(request):
+
+    """Render the current user's account settings page.
+
+    Args:
+        request (HttpRequest)
+
+    Returns:
+        HttpResponse: 200 if the page was sent successfully
+        HttpResponse: 302 if not logged in (redirect to login page)
+        HttpResponse: 405 if using an unsupported HTTP method
+
+    Example usage:
+
+        GET /account/settings
+
+    """
+
+    if 'passwdcheck' in request.session and request.session['passwdcheck'] == 'Y':
+        return render_to_response('student_account/account_settings.html', account_settings_context(request))
+    elif 'passwdcheck' in request.session and request.session['passwdcheck'] == 'N':
+        context = {
+            'correct' : False
+        }
+        return render_to_response('student_account/account_settings_confirm.html', context)
+    else:
+        context = {
+            'correct' : None
+        }
+        return render_to_response('student_account/account_settings_confirm.html', context)
 
 @login_required
 @require_http_methods(['GET'])
@@ -350,7 +581,6 @@ def finish_auth(request):  # pylint: disable=unused-argument
     """
     return render_to_response('student_account/finish_auth.html', {
         'disable_courseware_js': True,
-        'disable_footer': True,
     })
 
 
@@ -391,7 +621,6 @@ def account_settings_context(request):
         'platform_name': settings.PLATFORM_NAME,
         'user_accounts_api_url': reverse("accounts_api", kwargs={'username': user.username}),
         'user_preferences_api_url': reverse('preferences_api', kwargs={'username': user.username}),
-        'disable_courseware_js': True,
     }
 
     if third_party_auth.is_enabled():
@@ -406,17 +635,39 @@ def account_settings_context(request):
             'name': state.provider.name,  # The name of the provider e.g. Facebook
             'connected': state.has_account,  # Whether the user's edX account is connected with the provider.
             # If the user is not connected, they should be directed to this page to authenticate
-            # with the particular provider, as long as the provider supports initiating a login.
+            # with the particular provider.
             'connect_url': pipeline.get_login_url(
                 state.provider.provider_id,
                 pipeline.AUTH_ENTRY_ACCOUNT_SETTINGS,
                 # The url the user should be directed to after the auth process has completed.
                 redirect_url=reverse('account_settings'),
             ),
-            'accepts_logins': state.provider.accepts_logins,
             # If the user is connected, sending a POST request to this url removes the connection
             # information for this provider from their edX account.
             'disconnect_url': pipeline.get_disconnect_url(state.provider.provider_id, state.association_id),
         } for state in auth_states]
 
     return context
+
+
+def remove_account_view(request):
+    return render_to_response('student_account/remove_account.html')
+
+def remove_account(request):
+
+
+    if request.user.is_authenticated():
+        set_has_profile_image(request.user.username, False)
+        profile_image_names = get_profile_image_names(request.user.username)
+        remove_profile_images(profile_image_names)
+        account_privacy_setting = {u'account_privacy': u'private'}
+        update_user_preferences(request.user, account_privacy_setting, request.user.username)
+        find_user = User.objects.get(id=request.user.id)
+        find_user.is_active = False
+        ts = int(time.time())
+        find_user.email = 'delete_'+request.user.email+str(ts)
+        find_user.save()
+        logout(request)
+
+    return redirect('/')
+

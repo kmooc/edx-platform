@@ -20,7 +20,7 @@ sessions. Assumes structure:
 
 from .common import *
 import os
-from path import Path as path
+from path import path
 from warnings import filterwarnings, simplefilter
 from uuid import uuid4
 
@@ -33,6 +33,9 @@ from lms.envs.test import (
     DEFAULT_FILE_STORAGE,
     MEDIA_ROOT,
     MEDIA_URL,
+    # This is practically unused but needed by the oauth2_provider package, which
+    # some tests in common/ rely on.
+    OAUTH_OIDC_ISSUER,
 )
 
 # mongo connection settings
@@ -89,6 +92,10 @@ STATICFILES_DIRS += [
 # http://stackoverflow.com/questions/12816941/unit-testing-with-django-pipeline
 STATICFILES_STORAGE = 'pipeline.storage.NonPackagingPipelineStorage'
 STATIC_URL = "/static/"
+PIPELINE_ENABLED = False
+
+TENDER_DOMAIN = "help.edge.edx.org"
+TENDER_SUBDOMAIN = "edxedge"
 
 # Update module store settings per defaults for tests
 update_module_store_settings(
@@ -125,13 +132,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': TEST_ROOT / "db" / "cms.db",
-        'ATOMIC_REQUESTS': True,
     },
 }
-
-# This hack disables migrations during tests. We want to create tables directly from the models for speed.
-# See https://groups.google.com/d/msg/django-developers/PWPj3etj3-U/kCl6pMsQYYoJ.
-MIGRATION_MODULES = {app: "app.migrations_not_used_in_tests" for app in INSTALLED_APPS}
 
 LMS_BASE = "localhost:8000"
 FEATURES['PREVIEW_LMS_BASE'] = "preview"
@@ -173,6 +175,12 @@ CACHES = {
     },
 }
 
+# Add external_auth to Installed apps for testing
+INSTALLED_APPS += ('external_auth', )
+
+# Add milestones to Installed apps for testing
+INSTALLED_APPS += ('milestones', 'openedx.core.djangoapps.call_stack_manager')
+
 # hide ratelimit warnings while running tests
 filterwarnings('ignore', message='No request passed to the backend, unable to rate-limit')
 
@@ -205,8 +213,8 @@ PASSWORD_HASHERS = (
     'django.contrib.auth.hashers.MD5PasswordHasher',
 )
 
-# No segment key
-CMS_SEGMENT_KEY = None
+# dummy segment-io key
+SEGMENT_IO_KEY = '***REMOVED***'
 
 FEATURES['ENABLE_SERVICE_STATUS'] = True
 
@@ -214,8 +222,6 @@ FEATURES['ENABLE_SERVICE_STATUS'] = True
 FEATURES['EMBARGO'] = True
 
 # set up some testing for microsites
-FEATURES['USE_MICROSITES'] = True
-MICROSITE_ROOT_DIR = COMMON_ROOT / 'test' / 'test_microsites'
 MICROSITE_CONFIGURATION = {
     "test_microsite": {
         "domain_prefix": "testmicrosite",
@@ -233,51 +239,15 @@ MICROSITE_CONFIGURATION = {
         "show_homepage_promo_video": False,
         "course_index_overlay_text": "This is a Test Microsite Overlay Text.",
         "course_index_overlay_logo_file": "test_microsite/images/header-logo.png",
-        "homepage_overlay_html": "<h1>This is a Test Microsite Overlay HTML</h1>",
-        "ALWAYS_REDIRECT_HOMEPAGE_TO_DASHBOARD_FOR_AUTHENTICATED_USER": False,
-        "COURSE_CATALOG_VISIBILITY_PERMISSION": "see_in_catalog",
-        "COURSE_ABOUT_VISIBILITY_PERMISSION": "see_about_page",
-        "ENABLE_SHOPPING_CART": True,
-        "ENABLE_PAID_COURSE_REGISTRATION": True,
-        "SESSION_COOKIE_DOMAIN": "test_microsite.localhost",
-        "urls": {
-            'ABOUT': 'testmicrosite/about',
-            'PRIVACY': 'testmicrosite/privacy',
-            'TOS_AND_HONOR': 'testmicrosite/tos-and-honor',
-        },
-    },
-    "microsite_with_logistration": {
-        "domain_prefix": "logistration",
-        "university": "logistration",
-        "platform_name": "Test logistration",
-        "logo_image_url": "test_microsite/images/header-logo.png",
-        "email_from_address": "test_microsite@edx.org",
-        "payment_support_email": "test_microsite@edx.org",
-        "ENABLE_MKTG_SITE": False,
-        "ENABLE_COMBINED_LOGIN_REGISTRATION": True,
-        "SITE_NAME": "test_microsite.localhost",
-        "course_org_filter": "LogistrationX",
-        "course_about_show_social_links": False,
-        "css_overrides_file": "test_microsite/css/test_microsite.css",
-        "show_partners": False,
-        "show_homepage_promo_video": False,
-        "course_index_overlay_text": "Logistration.",
-        "course_index_overlay_logo_file": "test_microsite/images/header-logo.png",
-        "homepage_overlay_html": "<h1>This is a Logistration HTML</h1>",
-        "ALWAYS_REDIRECT_HOMEPAGE_TO_DASHBOARD_FOR_AUTHENTICATED_USER": False,
-        "COURSE_CATALOG_VISIBILITY_PERMISSION": "see_in_catalog",
-        "COURSE_ABOUT_VISIBILITY_PERMISSION": "see_about_page",
-        "ENABLE_SHOPPING_CART": True,
-        "ENABLE_PAID_COURSE_REGISTRATION": True,
-        "SESSION_COOKIE_DOMAIN": "test_logistration.localhost",
+        "homepage_overlay_html": "<h1>This is a Test Microsite Overlay HTML</h1>"
     },
     "default": {
         "university": "default_university",
         "domain_prefix": "www",
     }
 }
-MICROSITE_TEST_HOSTNAME = 'testmicrosite.testserver'
-MICROSITE_LOGISTRATION_HOSTNAME = 'logistration.testserver'
+MICROSITE_ROOT_DIR = COMMON_ROOT / 'test' / 'test_microsites'
+FEATURES['USE_MICROSITES'] = True
 
 # For consistency in user-experience, keep the value of this setting in sync with
 # the one in lms/envs/test.py
@@ -313,7 +283,3 @@ FEATURES['ENABLE_TEAMS'] = True
 
 # Dummy secret key for dev/test
 SECRET_KEY = '85920908f28904ed733fe576320db18cabd7b6cd'
-
-######### custom courses #########
-INSTALLED_APPS += ('openedx.core.djangoapps.ccxcon',)
-FEATURES['CUSTOM_COURSES_EDX'] = True

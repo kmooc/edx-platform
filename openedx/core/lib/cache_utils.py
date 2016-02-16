@@ -1,9 +1,8 @@
 """
 Utilities related to caching.
 """
-import cPickle as pickle
+
 import functools
-import zlib
 from xblock.core import XBlock
 
 
@@ -48,13 +47,3 @@ def hashvalue(arg):
         return unicode(arg.location)
     else:
         return unicode(arg)
-
-
-def zpickle(data):
-    """Given any data structure, returns a zlib compressed pickled serialization."""
-    return zlib.compress(pickle.dumps(data, pickle.HIGHEST_PROTOCOL))
-
-
-def zunpickle(zdata):
-    """Given a zlib compressed pickled serialization, returns the deserialized data."""
-    return pickle.loads(zlib.decompress(zdata))

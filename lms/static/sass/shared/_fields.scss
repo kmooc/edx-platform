@@ -12,7 +12,7 @@
         border-radius: 3px;
 
         span {
-            color: $gray;
+            color: $gray-l1;
         }
 
         &:hover {
@@ -118,7 +118,7 @@
 
     .u-field-message-help,
     .u-field-message-notification {
-        color: $gray;
+        color: $gray-l1;
     }
 }
 
@@ -133,8 +133,6 @@
         padding: 0;
         box-shadow: none;
         font-size: inherit;
-        font-weight: inherit;
-        text-shadow: none;
     }
 
 

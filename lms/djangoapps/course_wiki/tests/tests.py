@@ -22,10 +22,10 @@ class WikiRedirectTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         self.student = 'view@test.com'
         self.instructor = 'view2@test.com'
         self.password = 'foo'
-        for username, email in [('u1', self.student), ('u2', self.instructor)]:
-            self.create_account(username, email, self.password)
-            self.activate_user(email)
-            self.logout()
+        self.create_account('u1', self.student, self.password)
+        self.create_account('u2', self.instructor, self.password)
+        self.activate_user(self.student)
+        self.activate_user(self.instructor)
 
     @patch.dict("django.conf.settings.FEATURES", {'ALLOW_WIKI_ROOT_ACCESS': True})
     def test_wiki_redirect(self):
@@ -103,8 +103,8 @@ class WikiRedirectTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         """
         Ensure that the response has the course navigator.
         """
-        self.assertContains(resp, "Home")
-        self.assertContains(resp, "Course")
+        self.assertContains(resp, "Course Info")
+        self.assertContains(resp, "courseware")
 
     @patch.dict("django.conf.settings.FEATURES", {'ALLOW_WIKI_ROOT_ACCESS': True})
     def test_course_navigator(self):
@@ -133,7 +133,6 @@ class WikiRedirectTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         self.login(self.instructor, self.password)
         self.enroll(self.toy)
         self.create_course_page(self.toy)
-        self.logout()
 
         self.login(self.student, self.password)
         course_wiki_page = reverse('wiki:get', kwargs={'path': self.toy.wiki_slug + '/'})

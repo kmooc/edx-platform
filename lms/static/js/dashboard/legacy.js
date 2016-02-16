@@ -7,7 +7,7 @@
  */
  var edx = edx || {};
 
-(function($, gettext, Logger, accessibleModal, interpolate) {
+(function($, gettext, Logger, accessibleModal) {
     'use strict';
 
     edx.dashboard = edx.dashboard || {};
@@ -79,8 +79,8 @@
             return properties;
         }
 
-        function toggleCourseActionsDropdownInternal(element) {
-            var dashboard_index = element.data('dashboard-index');
+        function toggleCourseActionsDropdown(event) {
+            var dashboard_index = $(this).data('dashboard-index');
 
             // Toggle the visibility control for the selected element and set the focus
             var dropdown_selector = 'div#actions-dropdown-' + dashboard_index;
@@ -97,10 +97,6 @@
             var anchor = $(anchor_selector);
             var aria_expanded_state = (anchor.attr('aria-expanded') === 'true');
             anchor.attr('aria-expanded', !aria_expanded_state);
-        }
-
-        function toggleCourseActionsDropdown(event) {
-            toggleCourseActionsDropdownInternal($(this));
 
             // Suppress the actual click event from the browser
             event.preventDefault();
@@ -122,29 +118,16 @@
         });
 
         $(".action-email-settings").click(function(event) {
-            var element = $(event.target);
-            $("#email_settings_course_id").val( element.data("course-id") );
-            $("#email_settings_course_number").text( element.data("course-number") );
+            $("#email_settings_course_id").val( $(event.target).data("course-id") );
+            $("#email_settings_course_number").text( $(event.target).data("course-number") );
             if($(event.target).data("optout") === "False") {
                 $("#receive_emails").prop('checked', true);
             }
-            toggleCourseActionsDropdownInternal(element);
         });
 
         $(".action-unenroll").click(function(event) {
-            var element = $(event.target);
-            var track_info = element.data("track-info");
-            var course_number = element.data("course-number");
-            var course_name = element.data("course-name");
-            var cert_name_long = element.data("cert-name-long");
-            $('#track-info').html(interpolate(track_info, {
-                course_number: "<span id='unenroll_course_number'>" + course_number + "</span>",
-                course_name: "<span id='unenroll_course_name'>" + course_name + "</span>",
-                cert_name_long: "<span id='unenroll_cert_name'>" + cert_name_long + "</span>"
-            }, true));
-            $('#refund-info').html( element.data("refund-info") );
-            $("#unenroll_course_id").val( element.data("course-id") );
-            toggleCourseActionsDropdownInternal(element);
+            $("#unenroll_course_id").val( $(event.target).data("course-id") );
+            $("#unenroll_course_number").text( $(event.target).data("course-number") );
         });
 
         $('#unenroll_form').on('ajax:complete', function(event, xhr) {
@@ -207,8 +190,7 @@
         $("#unregister_block_course").click( function(event) {
             $("#unenroll_course_id").val($(event.target).data("course-id"));
             $("#unenroll_course_number").text($(event.target).data("course-number"));
-            $("#unenroll_course_name").text($(event.target).data("course-name"));
         });
     };
 
-})(jQuery, gettext, Logger, accessible_modal, interpolate); // jshint undef:false
+})(jQuery, gettext, Logger, accessible_modal);

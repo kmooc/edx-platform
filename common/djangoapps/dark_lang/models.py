@@ -22,10 +22,10 @@ class DarkLangConfig(ConfigurationModel):
 
         Example: ['it', 'de-at', 'es', 'pt-br']
         """
-        if not self.released_languages.strip():
+        if not self.released_languages.strip():  # pylint: disable=no-member
             return []
 
-        languages = [lang.lower().strip() for lang in self.released_languages.split(',')]
+        languages = [lang.lower().strip() for lang in self.released_languages.split(',')]  # pylint: disable=no-member
         # Put in alphabetical order
         languages.sort()
         return languages

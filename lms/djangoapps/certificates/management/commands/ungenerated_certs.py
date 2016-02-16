@@ -21,10 +21,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    """
-    Management command to find all students that need certificates
-    for courses that have finished and put their cert requests on the queue.
-    """
 
     help = """
     Find all students that need certificates for courses that have finished and

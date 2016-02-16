@@ -2,6 +2,7 @@
 Acceptance tests for Studio related to the split_test module.
 """
 
+import json
 import math
 from unittest import skip
 from nose.plugins.attrib import attr
@@ -333,9 +334,9 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
             return config, split_test
         return config
 
-    def publish_unit_in_lms_and_view(self, courseware_page, publish=True):
+    def publish_unit_in_LMS_and_view(self, courseware_page):
         """
-        Given course outline page, publish first unit and view it in LMS when publish is false, it will only view
+        Given course outline page, publish first unit and view it in LMS
         """
         self.outline_page.visit()
         self.outline_page.expand_all_subsections()
@@ -343,8 +344,7 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         unit = section.subsection_at(0).unit_at(0).go_to()
 
         # I publish and view in LMS and it is rendered correctly
-        if publish:
-            unit.publish_action.click()
+        unit.publish_action.click()
         unit.view_published_version()
         self.assertEqual(len(self.browser.window_handles), 2)
         courseware_page.wait_for_page()
@@ -1034,11 +1034,11 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
             config.edit_warning_message_text
         )
 
-    def publish_unit_and_verify_groups_in_lms(self, courseware_page, group_names, publish=True):
+    def publish_unit_and_verify_groups_in_LMS(self, courseware_page, group_names):
         """
         Publish first unit in LMS and verify that Courseware page has given Groups
         """
-        self.publish_unit_in_lms_and_view(courseware_page, publish)
+        self.publish_unit_in_LMS_and_view(courseware_page)
         self.assertEqual(u'split_test', courseware_page.xblock_component_type())
         self.assertTrue(courseware_page.q(css=".split-test-select").is_present())
         rendered_group_names = self.get_select_options(page=courseware_page, selector=".split-test-select")
@@ -1065,7 +1065,7 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
 
         # render in LMS correctly
         courseware_page = CoursewarePage(self.browser, self.course_id)
-        self.publish_unit_and_verify_groups_in_lms(courseware_page, [u'Group A', u'Group B', u'Group C'])
+        self.publish_unit_and_verify_groups_in_LMS(courseware_page, [u'Group A', u'Group B', u'Group C'])
 
         # I go to group configuration and delete group
         self.page.visit()
@@ -1079,11 +1079,7 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         self.browser.switch_to_window(self.browser.window_handles[0])
 
         # render in LMS to see how inactive vertical is rendered
-        self.publish_unit_and_verify_groups_in_lms(
-            courseware_page,
-            [u'Group A', u'Group B', u'Group ID 2 (inactive)'],
-            publish=False
-        )
+        self.publish_unit_and_verify_groups_in_LMS(courseware_page, [u'Group A', u'Group B', u'Group ID 2 (inactive)'])
 
         self.browser.close()
         self.browser.switch_to_window(self.browser.window_handles[0])
@@ -1093,4 +1089,4 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         container.delete(0)
 
         # render in LMS again
-        self.publish_unit_and_verify_groups_in_lms(courseware_page, [u'Group A', u'Group B'])
+        self.publish_unit_and_verify_groups_in_LMS(courseware_page, [u'Group A', u'Group B'])

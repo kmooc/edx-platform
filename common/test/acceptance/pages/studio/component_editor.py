@@ -1,6 +1,6 @@
 from bok_choy.page_object import PageObject
 from selenium.webdriver.common.keys import Keys
-from ..common.utils import click_css
+from utils import click_css
 from selenium.webdriver.support.ui import Select
 
 
@@ -108,19 +108,19 @@ class ComponentVisibilityEditorView(BaseComponentEditorView):
     """
     A :class:`.PageObject` representing the rendered view of a component visibility editor.
     """
-    OPTION_SELECTOR = '.modal-section-content .field'
+    OPTION_SELECTOR = '.modal-section-content li.field'
 
     @property
     def all_options(self):
         """
-        Return all visibility options.
+        Return all visibility 'li' options.
         """
         return self.q(css=self._bounded_selector(self.OPTION_SELECTOR)).results
 
     @property
     def selected_options(self):
         """
-        Return all selected visibility options.
+        Return all selected visibility 'li' options.
         """
         results = []
         for option in self.all_options:
@@ -131,7 +131,7 @@ class ComponentVisibilityEditorView(BaseComponentEditorView):
 
     def select_option(self, label_text, save=True):
         """
-        Click the first option which has a label matching `label_text`.
+        Click the first li which has a label matching `label_text`.
 
         Arguments:
             label_text (str): Text of a label accompanying the input

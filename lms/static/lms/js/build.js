@@ -21,19 +21,14 @@
             'js/discovery/discovery_factory',
             'js/edxnotes/views/notes_visibility_factory',
             'js/edxnotes/views/page_factory',
-            'js/financial-assistance/financial_assistance_form_factory',
             'js/groups/views/cohorts_dashboard_factory',
             'js/search/course/course_search_factory',
             'js/search/dashboard/dashboard_search_factory',
-            'js/student_account/logistration_factory',
             'js/student_account/views/account_settings_factory',
             'js/student_account/views/finish_auth_factory',
             'js/student_profile/views/learner_profile_factory',
             'js/views/message_banner',
-            'teams/js/teams_tab_factory',
-            'support/js/certificates_factory',
-            'support/js/enrollment_factory',
-            'js/bookmarks/bookmarks_factory'
+            'teams/js/teams_tab_factory'
         ]),
 
         /**

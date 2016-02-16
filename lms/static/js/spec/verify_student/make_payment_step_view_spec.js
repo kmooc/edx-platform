@@ -66,8 +66,7 @@ define([
                 var params = {
                     contribution: kwargs.amount || "",
                     course_id: kwargs.courseId || "",
-                    processor: kwargs.processor || "",
-                    sku: kwargs.sku || ""
+                    processor: kwargs.processor || ""
                 };
 
                 // Click the "go to payment" button
@@ -83,7 +82,7 @@ define([
                     // TODO put fixture responses in the right place
                     AjaxHelpers.respondWithJson( requests, {payment_page_url: 'http://payment-page-url/', payment_form_data: {foo: 'bar'}} );
                 } else {
-                    AjaxHelpers.respondWithTextError( requests, 400, SERVER_ERROR_MSG);
+                    AjaxHelpers.respondWithTextError( requests, 400, SERVER_ERROR_MSG );
                 }
             };
 
@@ -102,21 +101,17 @@ define([
                 var $el = $( '.payment-button' );
                 expect($el.length).toEqual(_.size(buttons));
                 _.each(buttons, function( expectedText, expectedId ) {
-                    var buttonEl = $( '#' + expectedId),
-                        request;
+                    var buttonEl = $( '#' + expectedId );
 
                     buttonEl.removeAttr('disabled');
                     expect( buttonEl.length ).toEqual( 1 );
                     expect( buttonEl[0] ).toHaveClass( 'payment-button' );
-                    expect( buttonEl[0] ).toHaveClass( 'action-primary' );
                     expect( buttonEl[0] ).toHaveText( expectedText );
 
                     buttonEl[0].click();
                     expect( buttonEl[0] ).toHaveClass( 'is-selected' );
                     expectPaymentButtonEnabled( false );
-                    request = AjaxHelpers.currentRequest(requests);
-                    expect(request.requestBody.split('&')).toContain('processor=' + expectedId);
-                    AjaxHelpers.respondWithJson(requests, {});
+                    expect(requests[requests.length - 1].requestBody.split('&')).toContain('processor=' + expectedId);
                 });
             };
 
@@ -205,22 +200,6 @@ define([
 
                 // Expect that the payment button is re-enabled
                 expectPaymentButtonEnabled( true );
-            });
-
-            it('displays an error if no payment processors are available', function () {
-                var view = createView({processors: []});
-                expect(view.errorModel.get('shown')).toBe(true);
-                expect(view.errorModel.get('errorTitle')).toEqual(
-                    'All payment options are currently unavailable.'
-                );
-                expect(view.errorModel.get('errorMsg')).toEqual(
-                    'Try the transaction again in a few minutes.'
-                );
-            });
-            it( 'check Initialize method without AB testing ', function() {
-                var view = createView();
-                expect( view.templateName ).toEqual('make_payment_step');
-                expect( view.btnClass ).toEqual('action-primary');
             });
 
         });

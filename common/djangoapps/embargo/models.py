@@ -88,7 +88,7 @@ class EmbargoedState(ConfigurationModel):
         """
         if self.embargoed_countries == '':
             return []
-        return [country.strip().upper() for country in self.embargoed_countries.split(',')]
+        return [country.strip().upper() for country in self.embargoed_countries.split(',')]  # pylint: disable=no-member
 
 
 class RestrictedCourse(models.Model):
@@ -221,7 +221,7 @@ class RestrictedCourse(models.Model):
         """
         country_rules_for_course = (
             CountryAccessRule.objects
-        ).select_related('country').filter(restricted_course=self)
+        ).select_related('restricted_country').filter(restricted_course=self)
 
         return {
             'enroll_msg': self.enroll_msg_key,
@@ -379,7 +379,7 @@ class Country(models.Model):
             code=unicode(self.country)
         )
 
-    class Meta(object):
+    class Meta:
         """Default ordering is ascending by country code """
         ordering = ['country']
 
@@ -522,7 +522,7 @@ class CountryAccessRule(models.Model):
         cache.delete(cache_key)
         log.info("Invalidated country access list for course %s", course_key)
 
-    class Meta(object):
+    class Meta:
         """a course can be added with either black or white list.  """
         unique_together = (
             # This restriction ensures that a country is on
@@ -646,7 +646,7 @@ class CourseAccessRuleHistory(models.Model):
             else:
                 CourseAccessRuleHistory.save_snapshot(restricted_course)
 
-    class Meta(object):
+    class Meta:  # pylint: disable=missing-docstring,old-style-class
         get_latest_by = 'timestamp'
 
 
@@ -703,7 +703,7 @@ class IPFilter(ConfigurationModel):
         """
         if self.whitelist == '':
             return []
-        return self.IPFilterList([addr.strip() for addr in self.whitelist.split(',')])
+        return self.IPFilterList([addr.strip() for addr in self.whitelist.split(',')])  # pylint: disable=no-member
 
     @property
     def blacklist_ips(self):
@@ -712,4 +712,4 @@ class IPFilter(ConfigurationModel):
         """
         if self.blacklist == '':
             return []
-        return self.IPFilterList([addr.strip() for addr in self.blacklist.split(',')])
+        return self.IPFilterList([addr.strip() for addr in self.blacklist.split(',')])  # pylint: disable=no-member

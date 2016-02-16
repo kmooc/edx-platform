@@ -17,7 +17,7 @@ class EdxNotesTab(EnrolledTab):
     view_name = "edxnotes"
 
     @classmethod
-    def is_enabled(cls, course, user=None):
+    def is_enabled(cls, course, user=None):  # pylint: disable=unused-argument
         """Returns true if the edX Notes feature is enabled in the course.
 
         Args:

@@ -13,33 +13,17 @@ from time import time
 
 # Import this just to export it
 from pymongo.errors import DuplicateKeyError  # pylint: disable=unused-import
-
-try:
-    from django.core.cache import caches, InvalidCacheBackendError
-    DJANGO_AVAILABLE = True
-except ImportError:
-    DJANGO_AVAILABLE = False
-
+from django.core.cache import get_cache, InvalidCacheBackendError
 import dogstats_wrapper as dog_stats_api
 
 from contracts import check, new_contract
-from mongodb_proxy import autoretry_read
+from mongodb_proxy import autoretry_read, MongoProxy
 from xmodule.exceptions import HeartbeatFailure
 from xmodule.modulestore import BlockData
 from xmodule.modulestore.split_mongo import BlockKey
-from xmodule.mongo_utils import connect_to_mongodb, create_collection_index
 
 
 new_contract('BlockData', BlockData)
-
-
-def get_cache(alias):
-    """
-    Return cache for an `alias`
-
-    Note: The primary purpose of this is to mock the cache in test_split_modulestore.py
-    """
-    return caches[alias]
 
 
 def round_power_2(value):
@@ -232,16 +216,15 @@ class CourseStructureCache(object):
     for set and get.
     """
     def __init__(self):
-        self.cache = None
-        if DJANGO_AVAILABLE:
-            try:
-                self.cache = get_cache('course_structure_cache')
-            except InvalidCacheBackendError:
-                pass
+        self.no_cache_found = False
+        try:
+            self.cache = get_cache('course_structure_cache')
+        except InvalidCacheBackendError:
+            self.no_cache_found = True
 
     def get(self, key, course_context=None):
         """Pull the compressed, pickled struct data from cache and deserialize."""
-        if self.cache is None:
+        if self.no_cache_found:
             return None
 
         with TIMER.timer("CourseStructureCache.get", course_context) as tagger:
@@ -262,7 +245,7 @@ class CourseStructureCache(object):
 
     def set(self, key, structure, course_context=None):
         """Given a structure, will pickle, compress, and write to cache."""
-        if self.cache is None:
+        if self.no_cache_found:
             return None
 
         with TIMER.timer("CourseStructureCache.set", course_context) as tagger:
@@ -288,19 +271,36 @@ class MongoConnection(object):
         """
         Create & open the connection, authenticate, and provide pointers to the collections
         """
-        # Set a write concern of 1, which makes writes complete successfully to the primary
-        # only before returning. Also makes pymongo report write errors.
-        kwargs['w'] = 1
-
-        self.database = connect_to_mongodb(
-            db, host,
-            port=port, tz_aware=tz_aware, user=user, password=password,
-            retry_wait_time=retry_wait_time, **kwargs
+        if kwargs.get('replicaSet') is None:
+            kwargs.pop('replicaSet', None)
+            mongo_class = pymongo.MongoClient
+        else:
+            mongo_class = pymongo.MongoReplicaSetClient
+        _client = mongo_class(
+            host=host,
+            port=port,
+            tz_aware=tz_aware,
+            **kwargs
         )
+        self.database = MongoProxy(
+            pymongo.database.Database(_client, db),
+            wait_time=retry_wait_time
+        )
+
+        if user is not None and password is not None:
+            self.database.authenticate(user, password)
 
         self.course_index = self.database[collection + '.active_versions']
         self.structures = self.database[collection + '.structures']
         self.definitions = self.database[collection + '.definitions']
+
+        # every app has write access to the db (v having a flag to indicate r/o v write)
+        # Force mongo to report errors, at the expense of performance
+        # pymongo docs suck but explanation:
+        # http://api.mongodb.org/java/2.10.1/com/mongodb/WriteConcern.html
+        self.course_index.write_concern = {'w': 1}
+        self.structures.write_concern = {'w': 1}
+        self.definitions.write_concern = {'w': 1}
 
     def heartbeat(self):
         """
@@ -309,7 +309,7 @@ class MongoConnection(object):
         if self.database.connection.alive():
             return True
         else:
-            raise HeartbeatFailure("Can't connect to {}".format(self.database.name), 'mongo')
+            raise HeartbeatFailure("Can't connect to {}".format(self.database.name))
 
     def get_structure(self, key, course_context=None):
         """
@@ -349,26 +349,6 @@ class MongoConnection(object):
             docs = [
                 structure_from_mongo(structure, course_context)
                 for structure in self.structures.find({'_id': {'$in': ids}})
-            ]
-            tagger.measure("structures", len(docs))
-            return docs
-
-    @autoretry_read()
-    def find_course_blocks_by_id(self, ids, course_context=None):
-        """
-        Find all structures that specified in `ids`. Among the blocks only return block whose type is `course`.
-
-        Arguments:
-            ids (list): A list of structure ids
-        """
-        with TIMER.timer("find_course_blocks_by_id", course_context) as tagger:
-            tagger.measure("requested_ids", len(ids))
-            docs = [
-                structure_from_mongo(structure, course_context)
-                for structure in self.structures.find(
-                    {'_id': {'$in': ids}},
-                    {'blocks': {'$elemMatch': {'block_type': 'course'}}, 'root': 1}
-                )
             ]
             tagger.measure("structures", len(docs))
             return docs
@@ -546,13 +526,11 @@ class MongoConnection(object):
         This method is intended for use by tests and administrative commands, and not
         to be run during server startup.
         """
-        create_collection_index(
-            self.course_index,
+        self.course_index.create_index(
             [
                 ('org', pymongo.ASCENDING),
                 ('course', pymongo.ASCENDING),
                 ('run', pymongo.ASCENDING)
             ],
-            unique=True,
-            background=True
+            unique=True
         )

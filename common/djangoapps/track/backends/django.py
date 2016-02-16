@@ -46,7 +46,7 @@ class TrackingLog(models.Model):
     time = models.DateTimeField('event time')
     host = models.CharField(max_length=64, blank=True)
 
-    class Meta(object):
+    class Meta:
         app_label = 'track'
         db_table = 'track_trackinglog'
 

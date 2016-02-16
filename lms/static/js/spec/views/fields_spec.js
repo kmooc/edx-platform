@@ -1,5 +1,6 @@
-define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers',
-        'common/js/spec_helpers/template_helpers', 'js/views/fields', 'js/spec/views/fields_helpers',
+define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers', 'common/js/spec_helpers/template_helpers',
+        'js/views/fields',
+        'js/spec/views/fields_helpers',
         'string_utils'],
     function (Backbone, $, _, AjaxHelpers, TemplateHelpers, FieldViews, FieldViewsSpecHelpers) {
         'use strict';
@@ -10,10 +11,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
         describe("edx.FieldViews", function () {
 
             var requests,
-                timerCallback,
-                dropdownSelectClass = '.u-field-value > select',
-                dropdownButtonClass = '.u-field-value > button',
-                textareaLinkClass = '.u-field-value a';
+                timerCallback;
 
             var fieldViewClasses = [
                 FieldViews.ReadonlyFieldView,
@@ -21,9 +19,16 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 FieldViews.DropdownFieldView,
                 FieldViews.LinkFieldView,
                 FieldViews.TextareaFieldView
+
             ];
 
             beforeEach(function () {
+                TemplateHelpers.installTemplate('templates/fields/field_readonly');
+                TemplateHelpers.installTemplate('templates/fields/field_dropdown');
+                TemplateHelpers.installTemplate('templates/fields/field_link');
+                TemplateHelpers.installTemplate('templates/fields/field_text');
+                TemplateHelpers.installTemplate('templates/fields/field_textarea');
+
                 timerCallback = jasmine.createSpy('timerCallback');
                 jasmine.Clock.useMock();
             });
@@ -67,8 +72,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 var fieldData = FieldViewsSpecHelpers.createFieldData(fieldViewClass, {
                     title: 'Preferred Language',
                     valueAttribute: 'language',
-                    helpMessage: 'Your preferred language.',
-                    persistChanges: true
+                    helpMessage: 'Your preferred language.'
                 });
 
                 var view = new fieldViewClass(fieldData);
@@ -92,11 +96,11 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 });
                 var view = new FieldViews.ReadonlyFieldView(fieldData).render();
 
-                FieldViewsSpecHelpers.expectTitleAndMessageToContain(view, fieldData.title, fieldData.helpMessage);
-                expect(view.fieldValue()).toBe(USERNAME);
+                FieldViewsSpecHelpers.expectTitleAndMessageToContain(view, fieldData.title, fieldData.helpMessage, false);
+                expect(view.$('.u-field-value input').val().trim()).toBe(USERNAME);
 
                 view.model.set({'username': 'bookworm'});
-                expect(view.fieldValue()).toBe('bookworm');
+                expect(view.$('.u-field-value input').val().trim()).toBe('bookworm');
             });
 
             it("correctly renders, updates and persists changes to TextFieldView when editable == always", function() {
@@ -106,8 +110,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 var fieldData = FieldViewsSpecHelpers.createFieldData(FieldViews.TextFieldView, {
                     title: 'Full Name',
                     valueAttribute: 'name',
-                    helpMessage: 'How are you?',
-                    persistChanges: true
+                    helpMessage: 'How are you?'
                 });
                 var view = new FieldViews.TextFieldView(fieldData).render();
 
@@ -131,35 +134,17 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                     title: 'Full Name',
                     valueAttribute: 'name',
                     helpMessage: 'edX full name',
-                    editable: 'never',
-                    persistChanges: true
+                    editable: 'never'
 
                 });
                 var view = new FieldViews.DropdownFieldView(fieldData).render();
-                var readOnlyDisplayClass = '.u-field-value-readonly';
-
-                FieldViewsSpecHelpers.expectDropdownSrTitleToContain(view, fieldData.title);
-                FieldViewsSpecHelpers.expectMessageContains(view, fieldData.helpMessage);
+                FieldViewsSpecHelpers.expectTitleAndMessageToContain(view, fieldData.title, fieldData.helpMessage, false);
                 expect(view.el).toHaveClass('mode-hidden');
-                // Note that "name" will be retrieved from the model, but the options specified are
-                // the languages options. Therefore initially the placeholder message will be shown because
-                // the model value does not match any of the possible options.
-                expect(view.fieldValue()).toBeNull();
-                expect(view.$(readOnlyDisplayClass).text()).toBe(fieldData.placeholderValue);
-                // Make sure that the select and the button are not in the HTML.
-                expect(view.$(dropdownSelectClass).length).toBe(0);
-                expect(view.$(dropdownButtonClass).length).toBe(0);
 
                 view.model.set({'name': fieldData.options[1][0]});
                 expect(view.el).toHaveClass('mode-display');
-                expect(view.fieldValue()).toBe(fieldData.options[1][0]);
-                expect(view.$(readOnlyDisplayClass).text()).toBe(fieldData.options[1][1]);
-
                 view.$el.click();
                 expect(view.el).toHaveClass('mode-display');
-                // Make sure that the select and the button still are not in the HTML.
-                expect(view.$(dropdownSelectClass).length).toBe(0);
-                expect(view.$(dropdownButtonClass).length).toBe(0);
             });
 
             it("correctly renders, updates and persists changes to DropdownFieldView when editable == always", function() {
@@ -169,8 +154,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 var fieldData = FieldViewsSpecHelpers.createFieldData(FieldViews.DropdownFieldView, {
                     title: 'Full Name',
                     valueAttribute: 'name',
-                    helpMessage: 'edX full name',
-                    persistChanges: true
+                    helpMessage: 'edX full name'
                 });
                 var view = new FieldViews.DropdownFieldView(fieldData).render();
 
@@ -194,8 +178,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                     title: 'Full Name',
                     valueAttribute: 'name',
                     helpMessage: 'edX full name',
-                    editable: 'toggle',
-                    persistChanges: true
+                    editable: 'toggle'
                 });
                 var view = new FieldViews.DropdownFieldView(fieldData).render();
 
@@ -222,24 +205,19 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                         valueAttribute: 'drop-down',
                         helpMessage: 'edX drop down',
                         editable: editable,
-                        required:true,
-                        persistChanges: true
+                        required:true
                     });
                     var view = new FieldViews.DropdownFieldView(fieldData).render();
 
                     expect(view.modelValueIsSet()).toBe(false);
                     expect(view.displayValue()).toBe('');
 
-                    if (editable === 'toggle') {
-                        expect(view.$(dropdownButtonClass).length).toBe(1);
-                        view.showEditMode(true);
-                    }
-                    expect(view.$(dropdownSelectClass).length).toBe(1);
-                    view.$(dropdownSelectClass).val(FieldViewsSpecHelpers.SELECT_OPTIONS[0]).change();
+                    if(editable === 'toggle') { view.showEditMode(true); }
+                    view.$('.u-field-value > select').val(FieldViewsSpecHelpers.SELECT_OPTIONS[0]).change();
                     expect(view.fieldValue()).toBe(FieldViewsSpecHelpers.SELECT_OPTIONS[0][0]);
 
                     AjaxHelpers.respondWithNoContent(requests);
-                    if (editable === 'toggle') { view.showEditMode(true); }
+                    if(editable === 'toggle') { view.showEditMode(true); }
                     // When server returns success, there should no longer be an empty option.
                     expect($(view.$('.u-field-value option')[0]).val()).toBe('si');
                 });
@@ -252,26 +230,22 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                     helpMessage: 'Wicked is good',
                     placeholderValue: "Tell other edX learners a little about yourself: where you live, " +
                         "what your interests are, why you’re taking courses on edX, or what you hope to learn.",
-                    editable: 'never',
-                    persistChanges: true,
-                    messagePosition: 'header'
+                    editable: 'never'
                 });
 
                 // set bio to empty to see the placeholder.
                 fieldData.model.set({bio: ''});
                 var view = new FieldViews.TextareaFieldView(fieldData).render();
-                FieldViewsSpecHelpers.expectTitleAndMessageToContain(view, fieldData.title, fieldData.helpMessage);
+                FieldViewsSpecHelpers.expectTitleAndMessageToContain(view, fieldData.title, fieldData.helpMessage, false);
                 expect(view.el).toHaveClass('mode-hidden');
-                expect(view.fieldValue()).toBe(fieldData.placeholderValue);
-                expect(view.$(textareaLinkClass).length).toBe(0);
+                expect(view.$('.u-field-value .u-field-value-readonly').text()).toBe(fieldData.placeholderValue);
 
                 var bio = 'Too much to tell!';
                 view.model.set({'bio': bio});
                 expect(view.el).toHaveClass('mode-display');
-                expect(view.fieldValue()).toBe(bio);
+                expect(view.$('.u-field-value .u-field-value-readonly').text()).toBe(bio);
                 view.$el.click();
                 expect(view.el).toHaveClass('mode-display');
-                expect(view.$(textareaLinkClass).length).toBe(0);
             });
 
             it("correctly renders, updates and persists changes to TextAreaFieldView when editable == toggle", function() {
@@ -285,9 +259,8 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                     helpMessage: 'Wicked is good',
                     placeholderValue: "Tell other edX learners a little about yourself: where you live, " +
                         "what your interests are, why you’re taking courses on edX, or what you hope to learn.",
-                    editable: 'toggle',
-                    persistChanges: true,
-                    messagePosition: 'header'
+                    editable: 'toggle'
+
                 });
                 fieldData.model.set({'bio': ''});
 
@@ -296,26 +269,23 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 FieldViewsSpecHelpers.expectTitleToContain(view, fieldData.title);
                 FieldViewsSpecHelpers.expectMessageContains(view, view.indicators.canEdit);
                 expect(view.el).toHaveClass('mode-placeholder');
-                expect(view.fieldValue()).toBe(fieldData.placeholderValue);
-                expect(view.$(textareaLinkClass).length).toBe(1);
+                expect(view.$('.u-field-value .u-field-value-readonly').text()).toBe(fieldData.placeholderValue);
 
                 view.$('.wrapper-u-field').click();
                 expect(view.el).toHaveClass('mode-edit');
                 view.$(valueInputSelector).val(BIO).focusout();
                 expect(view.fieldValue()).toBe(BIO);
-                expect(view.$(textareaLinkClass).length).toBe(0);
                 AjaxHelpers.expectJsonRequest(
                     requests, 'PATCH', view.model.url, {'bio': BIO}
                 );
                 AjaxHelpers.respondWithNoContent(requests);
                 expect(view.el).toHaveClass('mode-display');
-                expect(view.$(textareaLinkClass).length).toBe(1);
 
                 view.$('.wrapper-u-field').click();
                 view.$(valueInputSelector).val('').focusout();
                 AjaxHelpers.respondWithNoContent(requests);
                 expect(view.el).toHaveClass('mode-placeholder');
-                expect(view.fieldValue()).toBe(fieldData.placeholderValue);
+                expect(view.$('.u-field-value .u-field-value-readonly').text()).toBe(fieldData.placeholderValue);
             });
 
             it("correctly renders LinkFieldView", function() {
@@ -327,33 +297,8 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 });
                 var view = new FieldViews.LinkFieldView(fieldData).render();
 
-                FieldViewsSpecHelpers.expectTitleAndMessageToContain(view, fieldData.title, fieldData.helpMessage);
+                FieldViewsSpecHelpers.expectTitleAndMessageToContain(view, fieldData.title, fieldData.helpMessage, false);
                 expect(view.$('.u-field-value > a .u-field-link-title-' + view.options.valueAttribute).text().trim()).toBe(fieldData.linkTitle);
-            });
-
-            it("correctly renders LinkFieldView", function() {
-                var fieldData = FieldViewsSpecHelpers.createFieldData(FieldViews.LinkFieldView, {
-                    title: 'Title',
-                    linkTitle: 'Link title',
-                    helpMessage: 'Click the link.',
-                    valueAttribute: 'password-reset'
-                });
-                var view = new FieldViews.LinkFieldView(fieldData).render();
-
-                FieldViewsSpecHelpers.expectTitleAndMessageToContain(view, fieldData.title, fieldData.helpMessage);
-                expect(view.$('.u-field-value > a .u-field-link-title-' + view.options.valueAttribute).text().trim()).toBe(fieldData.linkTitle);
-            });
-
-            it("can't persist changes if persistChanges is off", function() {
-                requests = AjaxHelpers.requests(this);
-                var fieldClasses = [
-                    FieldViews.TextFieldView,
-                    FieldViews.DropdownFieldView,
-                    FieldViews.TextareaFieldView
-                ];
-                for (var i = 0; i < fieldClasses.length; i++) {
-                    FieldViewsSpecHelpers.verifyPersistence(fieldClasses[i], requests);
-                }
             });
         });
     });

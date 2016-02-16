@@ -1,5 +1,5 @@
-define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers/view_helpers", "js/index",
-        "common/js/components/utils/view_utils"],
+define(["jquery", "common/js/spec_helpers/ajax_helpers", "js/spec_helpers/view_helpers", "js/index",
+        "js/views/utils/view_utils"],
     function ($, AjaxHelpers, ViewHelpers, IndexUtils, ViewUtils) {
         describe("Course listing page", function () {
             var mockIndexPageHTML = readFixtures('mock/mock-index-page.underscore');
@@ -41,8 +41,6 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                 var requests = AjaxHelpers.requests(this);
                 var redirectSpy = spyOn(ViewUtils, 'redirect');
                 $('.new-course-button').click()
-                AjaxHelpers.expectJsonRequest(requests, 'GET', '/organizations');
-                AjaxHelpers.respondWithJson(requests, ['DemoX', 'DemoX2', 'DemoX3']);
                 fillInFields('DemoX', 'DM101', '2014', 'Demo course');
                 $('.new-course-save').click();
                 AjaxHelpers.expectJsonRequest(requests, 'POST', '/course/', {
@@ -55,14 +53,11 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                     url: 'dummy_test_url'
                 });
                 expect(redirectSpy).toHaveBeenCalledWith('dummy_test_url');
-                $(".new-course-org").autocomplete("destroy");
             });
 
             it("displays an error when saving fails", function () {
                 var requests = AjaxHelpers.requests(this);
                 $('.new-course-button').click();
-                AjaxHelpers.expectJsonRequest(requests, 'GET', '/organizations');
-                AjaxHelpers.respondWithJson(requests, ['DemoX', 'DemoX2', 'DemoX3']);
                 fillInFields('DemoX', 'DM101', '2014', 'Demo course');
                 $('.new-course-save').click();
                 AjaxHelpers.respondWithJson(requests, {
@@ -72,7 +67,6 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                 expect($('#course_creation_error')).toContainText('error message');
                 expect($('.new-course-save')).toHaveClass('is-disabled');
                 expect($('.new-course-save')).toHaveAttr('aria-disabled', 'true');
-                $(".new-course-org").autocomplete("destroy");
             });
 
             it("saves new libraries", function () {
@@ -94,6 +88,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
 
             it("displays an error when a required field is blank", function () {
                 var requests = AjaxHelpers.requests(this);
+                var requests_count = requests.length;
                 $('.new-library-button').click();
                 var values = ['DemoX', 'DM101', 'Demo library'];
                 // Try making each of these three values empty one at a time and ensure the form won't submit:
@@ -105,7 +100,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                     expect($('.new-library-save')).toHaveClass('is-disabled');
                     expect($('.new-library-save')).toHaveAttr('aria-disabled', 'true');
                     $('.new-library-save').click();
-                    AjaxHelpers.expectNoRequests(requests);
+                    expect(requests.length).toEqual(requests_count); // Expect no new requests
                 }
             });
 

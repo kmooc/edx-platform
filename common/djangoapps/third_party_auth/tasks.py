@@ -2,8 +2,8 @@
 """
 Code to manage fetching and storing the metadata of IdPs.
 """
-
-from celery.task import task
+#pylint: disable=no-member
+from celery.task import task  # pylint: disable=import-error,no-name-in-module
 import datetime
 import dateutil.parser
 import logging

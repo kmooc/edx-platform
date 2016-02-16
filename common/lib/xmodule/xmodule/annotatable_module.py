@@ -10,8 +10,7 @@ import textwrap
 
 log = logging.getLogger(__name__)
 
-# Make '_' a no-op so we can scrape strings. Using lambda instead of
-#  `django.utils.translation.ugettext_noop` because Django cannot be imported in this file
+# Make '_' a no-op so we can scrape strings
 _ = lambda text: text
 
 
@@ -150,7 +149,7 @@ class AnnotatableModule(AnnotatableFields, XModule):
     def get_html(self):
         """ Renders parameters to template. """
         context = {
-            'display_name': self.display_name_with_default_escaped,
+            'display_name': self.display_name_with_default,
             'element_id': self.element_id,
             'instructions_html': self.instructions,
             'content_html': self._render_content()

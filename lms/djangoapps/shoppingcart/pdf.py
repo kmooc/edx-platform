@@ -18,7 +18,7 @@ from xmodule.modulestore.django import ModuleI18nService
 log = logging.getLogger("PDF Generation")
 
 
-class NumberedCanvas(Canvas):
+class NumberedCanvas(Canvas):  # pylint: disable=abstract-method
     """
     Canvas child class with auto page-numbering.
     """

@@ -1,4 +1,6 @@
+
 # -*- coding: utf-8 -*-
+# pylint: disable=abstract-method
 """Video is ungraded Xmodule for support video content.
 It's new improved video module, which support additional feature:
 - Can play non-YouTube video sources via in-browser HTML5 video player.
@@ -27,7 +29,6 @@ from openedx.core.lib.cache_utils import memoize_in_request_cache
 from xblock.core import XBlock
 from xblock.fields import ScopeIds
 from xblock.runtime import KvsFieldData
-from opaque_keys.edx.locator import AssetLocator
 
 from xmodule.modulestore.inheritance import InheritanceKeyValueStore, own_metadata
 from xmodule.x_module import XModule, module_attr
@@ -35,10 +36,9 @@ from xmodule.editing_module import TabsEditingDescriptor
 from xmodule.raw_module import EmptyDataRawDescriptor
 from xmodule.xml_module import is_pointer_tag, name_to_pathname, deserialize_field
 from xmodule.exceptions import NotFoundError
-from xmodule.contentstore.content import StaticContent
 
-from .transcripts_utils import VideoTranscriptsMixin, Transcript, get_html5_ids
-from .video_utils import create_youtube_string, get_poster, rewrite_video_url
+from .transcripts_utils import VideoTranscriptsMixin
+from .video_utils import create_youtube_string, get_video_from_cdn, get_poster
 from .bumper_utils import bumperize
 from .video_xfields import VideoFields
 from .video_handlers import VideoStudentViewHandlers, VideoStudioViewHandlers
@@ -83,9 +83,6 @@ except ImportError:
     BrandingInfoConfig = None
 
 log = logging.getLogger(__name__)
-
-# Make '_' a no-op so we can scrape strings. Using lambda instead of
-#  `django.utils.translation.ugettext_noop` because Django cannot be imported in this file
 _ = lambda text: text
 
 
@@ -188,18 +185,12 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
         return track_url, transcript_language, sorted_languages
 
     def get_html(self):
-        track_status = (self.download_track and self.track)
-        transcript_download_format = self.transcript_download_format if not track_status else None
+        transcript_download_format = self.transcript_download_format if not (self.download_track and self.track) else None
         sources = filter(None, self.html5_sources)
 
         download_video_link = None
         branding_info = None
         youtube_streams = ""
-
-        # Determine if there is an alternative source for this video
-        # based on user locale.  This exists to support cases where
-        # we leverage a geography specific CDN, like China.
-        cdn_url = getattr(settings, 'VIDEO_CDN_URL', {}).get(self.system.user_location)
 
         # If we have an edx_video_id, we prefer its values over what we store
         # internally for download links (source, html5_sources) and the youtube
@@ -220,12 +211,7 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
                         if url not in sources:
                             sources.append(url)
                         if self.download_video:
-                            # function returns None when the url cannot be re-written
-                            rewritten_link = rewrite_video_url(cdn_url, url)
-                            if rewritten_link:
-                                download_video_link = rewritten_link
-                            else:
-                                download_video_link = url
+                            download_video_link = url
 
                 # set the youtube url
                 if val_video_urls["youtube"]:
@@ -241,11 +227,12 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
         # 'CN' is China ISO 3166-1 country code.
         # Video caching is disabled for Studio. User_location is always None in Studio.
         # CountryMiddleware disabled for Studio.
+        cdn_url = getattr(settings, 'VIDEO_CDN_URL', {}).get(self.system.user_location)
         if getattr(self, 'video_speed_optimizations', True) and cdn_url:
             branding_info = BrandingInfoConfig.get_config().get(self.system.user_location)
 
             for index, source_url in enumerate(sources):
-                new_url = rewrite_video_url(cdn_url, source_url)
+                new_url = get_video_from_cdn(cdn_url, source_url)
                 if new_url:
                     sources[index] = new_url
 
@@ -343,7 +330,7 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
             'cdn_eval': cdn_eval,
             'cdn_exp_group': cdn_exp_group,
             'id': self.location.html_id(),
-            'display_name': self.display_name_with_default_escaped,
+            'display_name': self.display_name_with_default,
             'handout': self.handout,
             'download_video_link': download_video_link,
             'track': track_url,
@@ -363,8 +350,6 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
     """
     module_class = VideoModule
     transcript = module_attr('transcript')
-
-    show_in_read_only_mode = True
 
     tabs = [
         {
@@ -437,23 +422,6 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
         This should be fixed too.
         """
         metadata_was_changed_by_user = old_metadata != own_metadata(self)
-
-        # There is an edge case when old_metadata and own_metadata are same and we are importing transcript from youtube
-        # then there is a syncing issue where html5_subs are not syncing with youtube sub, We can make sync better by
-        # checking if transcript is present for the video and if any html5_ids transcript is not present then trigger
-        # the manage_video_subtitles_save to create the missing transcript with particular html5_id.
-        if not metadata_was_changed_by_user and self.sub and hasattr(self, 'html5_sources'):
-            html5_ids = get_html5_ids(self.html5_sources)
-            for subs_id in html5_ids:
-                try:
-                    Transcript.asset(self.location, subs_id)
-                except NotFoundError:
-                    # If a transcript does not not exist with particular html5_id then there is no need to check other
-                    # html5_ids because we have to create a new transcript with this missing html5_id by turning on
-                    # metadata_was_changed_by_user flag.
-                    metadata_was_changed_by_user = True
-                    break
-
         if metadata_was_changed_by_user:
             manage_video_subtitles_save(
                 self,
@@ -488,11 +456,7 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
         languages.sort(key=lambda l: l['label'])
         editable_fields['transcripts']['languages'] = languages
         editable_fields['transcripts']['type'] = 'VideoTranslations'
-        editable_fields['transcripts']['urlRoot'] = self.runtime.handler_url(
-            self,
-            'studio_transcript',
-            'translation'
-        ).rstrip('/?')
+        editable_fields['transcripts']['urlRoot'] = self.runtime.handler_url(self, 'studio_transcript', 'translation').rstrip('/?')
         editable_fields['handout']['type'] = 'FileUploader'
 
         return editable_fields
@@ -602,9 +566,6 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
         youtube_id_1_0 = metadata_fields['youtube_id_1_0']
 
         def get_youtube_link(video_id):
-            """
-            Returns the fully-qualified YouTube URL for the given video identifier
-            """
             # First try a lookup in VAL. If we have a YouTube entry there, it overrides the
             # one passed in.
             if self.edx_video_id and edxval_api:
@@ -619,7 +580,7 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
 
         _ = self.runtime.service(self, "i18n").ugettext
         video_url.update({
-            'help': _('The URL for your video. This can be a YouTube URL or a link to an .mp4, .ogg, or .webm video file hosted elsewhere on the Internet.'),  # pylint: disable=line-too-long
+            'help': _('The URL for your video. This can be a YouTube URL or a link to an .mp4, .ogg, or .webm video file hosted elsewhere on the Internet.'),
             'display_name': _('Default Video URL'),
             'field_name': 'video_url',
             'type': 'VideoList',
@@ -725,14 +686,6 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
                 # for about a month we did it for Strings also).
                 field_data[attr] = deserialize_field(cls.fields[attr], value)
 
-        course_id = getattr(id_generator, 'target_course_id', None)
-        # Update the handout location with current course_id
-        if 'handout' in field_data.keys() and course_id:
-            handout_location = StaticContent.get_location_from_path(field_data['handout'])
-            if isinstance(handout_location, AssetLocator):
-                handout_new_location = StaticContent.compute_location(course_id, handout_location.path)
-                field_data['handout'] = StaticContent.serialize_asset_key_with_slash(handout_new_location)
-
         # For backwards compatibility: Add `source` if XML doesn't have `download_video`
         # attribute.
         if 'download_video' not in field_data and sources:
@@ -754,7 +707,7 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
             edxval_api.import_from_xml(
                 video_asset_elem,
                 field_data['edx_video_id'],
-                course_id=course_id
+                course_id=getattr(id_generator, 'target_course_id', None)
             )
 
         # load license if it exists
@@ -810,13 +763,11 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
         """
         return edxval_api.get_video_info_for_course_and_profiles(unicode(course_id), video_profile_names)
 
-    def student_view_data(self, context=None):
+    def student_view_json(self, context):
         """
         Returns a JSON representation of the student_view of this XModule.
         The contract of the JSON content is between the caller and the particular XModule.
         """
-        context = context or {}
-
         # If the "only_on_web" field is set on this video, do not return the rest of the video's data
         # in this json view, since this video is to be accessed only through its web view."
         if self.only_on_web:
@@ -827,7 +778,7 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
 
         # Check in VAL data first if edx_video_id exists
         if self.edx_video_id:
-            video_profile_names = context.get("profiles", ["mobile_low"])
+            video_profile_names = context.get("profiles", [])
 
             # get and cache bulk VAL data for course
             val_course_data = self.get_cached_val_data_for_course(video_profile_names, self.location.course_key)

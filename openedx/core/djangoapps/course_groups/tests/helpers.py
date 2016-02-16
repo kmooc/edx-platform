@@ -11,15 +11,14 @@ from xmodule.modulestore.django import modulestore
 from xmodule.modulestore import ModuleStoreEnum
 
 from ..cohorts import set_course_cohort_settings
-from ..models import CourseUserGroup, CourseCohort, CourseCohortsSettings, CohortMembership
+from ..models import CourseUserGroup, CourseCohort, CourseCohortsSettings
 
 
 class CohortFactory(DjangoModelFactory):
     """
     Factory for constructing mock cohorts.
     """
-    class Meta(object):
-        model = CourseUserGroup
+    FACTORY_FOR = CourseUserGroup
 
     name = Sequence("cohort{}".format)
     course_id = SlashSeparatedCourseKey("dummy", "dummy", "dummy")
@@ -32,27 +31,23 @@ class CohortFactory(DjangoModelFactory):
         """
         if extracted:
             self.users.add(*extracted)
-            for user in self.users.all():
-                CohortMembership.objects.create(
-                    user=user,
-                    course_user_group=self,
-                )
 
 
 class CourseCohortFactory(DjangoModelFactory):
     """
     Factory for constructing mock course cohort.
     """
-    class Meta(object):
-        model = CourseCohort
+    FACTORY_FOR = CourseCohort
+
+    course_user_group = factory.SubFactory(CohortFactory)
+    assignment_type = 'manual'
 
 
 class CourseCohortSettingsFactory(DjangoModelFactory):
     """
     Factory for constructing mock course cohort settings.
     """
-    class Meta(object):
-        model = CourseCohortsSettings
+    FACTORY_FOR = CourseCohortsSettings
 
     is_cohorted = False
     course_id = SlashSeparatedCourseKey("dummy", "dummy", "dummy")
@@ -79,7 +74,7 @@ def config_course_cohorts_legacy(
         cohorted,
         cohorted_discussions=None,
         auto_cohort_groups=None,
-        always_cohort_inline_discussions=None
+        always_cohort_inline_discussions=None  # pylint: disable=invalid-name
 ):
     """
     Given a course with no discussion set up, add the discussions and set
@@ -103,9 +98,6 @@ def config_course_cohorts_legacy(
         Nothing -- modifies course in place.
     """
     def to_id(name):
-        """
-        Helper method to convert a discussion topic name to a database identifier
-        """
         return topic_name_to_id(course, name)
 
     topics = dict((name, {"sort_key": "A",
@@ -141,7 +133,7 @@ def config_course_cohorts(
         manual_cohorts=[],
         discussion_topics=[],
         cohorted_discussions=[],
-        always_cohort_inline_discussions=True
+        always_cohort_inline_discussions=True  # pylint: disable=invalid-name
 ):
     """
     Set discussions and configure cohorts for a course.

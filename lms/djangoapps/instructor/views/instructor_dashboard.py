@@ -1,7 +1,7 @@
+# -*- coding: utf-8 -*-
 """
 Instructor Dashboard Views
 """
-
 import logging
 import datetime
 from opaque_keys import InvalidKeyError
@@ -37,20 +37,20 @@ from student.models import CourseEnrollment
 from shoppingcart.models import Coupon, PaidCourseRegistration, CourseRegCodeItem
 from course_modes.models import CourseMode, CourseModesArchive
 from student.roles import CourseFinanceAdminRole, CourseSalesAdminRole
-from certificates.models import (
-    CertificateGenerationConfiguration,
-    CertificateWhitelist,
-    GeneratedCertificate,
-    CertificateStatuses,
-    CertificateGenerationHistory,
-    CertificateInvalidation,
-)
+from certificates.models import CertificateGenerationConfiguration
 from certificates import api as certs_api
-from util.date_utils import get_default_time_display
 
 from class_dashboard.dashboard_data import get_section_display_name, get_array_section_has_problem
 from .tools import get_units_with_due_date, title_or_url, bulk_email_is_enabled_for_course
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
+
+from pymongo import MongoClient
+import MySQLdb as mdb
+import sys
+from django.http import HttpResponse
+from django.utils import simplejson
+import csv
+
 
 log = logging.getLogger(__name__)
 
@@ -66,11 +66,11 @@ class InstructorDashboardTab(CourseTab):
     is_dynamic = True    # The "Instructor" tab is instead dynamically added when it is enabled
 
     @classmethod
-    def is_enabled(cls, course, user=None):
+    def is_enabled(cls, course, user=None):  # pylint: disable=unused-argument,redefined-outer-name
         """
         Returns true if the specified user has staff access.
         """
-        return bool(user and has_access(user, 'staff', course, course.id))
+        return user and has_access(user, 'staff', course, course.id)
 
 
 @ensure_csrf_cookie
@@ -87,10 +87,10 @@ def instructor_dashboard_2(request, course_id):
 
     access = {
         'admin': request.user.is_staff,
-        'instructor': bool(has_access(request.user, 'instructor', course)),
+        'instructor': has_access(request.user, 'instructor', course),
         'finance_admin': CourseFinanceAdminRole(course_key).has_user(request.user),
         'sales_admin': CourseSalesAdminRole(course_key).has_user(request.user),
-        'staff': bool(has_access(request.user, 'staff', course)),
+        'staff': has_access(request.user, 'staff', course),
         'forum_admin': has_forum_access(request.user, course_key, FORUM_ROLE_ADMINISTRATOR),
     }
 
@@ -105,24 +105,10 @@ def instructor_dashboard_2(request, course_id):
         _section_cohort_management(course, access),
         _section_student_admin(course, access),
         _section_data_download(course, access),
+        _section_analytics(course, access),
     ]
 
-    analytics_dashboard_message = None
-    if settings.ANALYTICS_DASHBOARD_URL:
-        # Construct a URL to the external analytics dashboard
-        analytics_dashboard_url = '{0}/courses/{1}'.format(settings.ANALYTICS_DASHBOARD_URL, unicode(course_key))
-        link_start = "<a href=\"{}\" target=\"_blank\">".format(analytics_dashboard_url)
-        analytics_dashboard_message = _(
-            "To gain insights into student enrollment and participation {link_start}"
-            "visit {analytics_dashboard_name}, our new course analytics product{link_end}."
-        )
-        analytics_dashboard_message = analytics_dashboard_message.format(
-            link_start=link_start, link_end="</a>", analytics_dashboard_name=settings.ANALYTICS_DASHBOARD_NAME)
-
-        # Temporarily show the "Analytics" section until we have a better way of linking to Insights
-        sections.append(_section_analytics(course, access))
-
-    # Check if there is corresponding entry in the CourseMode Table related to the Instructor Dashboard course
+    #check if there is corresponding entry in the CourseMode Table related to the Instructor Dashboard course
     course_mode_has_price = False
     paid_modes = CourseMode.paid_modes_for_course(course_key)
     if len(paid_modes) == 1:
@@ -134,7 +120,7 @@ def instructor_dashboard_2(request, course_id):
             unicode(course_key), len(paid_modes)
         )
 
-    if settings.FEATURES.get('INDIVIDUAL_DUE_DATES') and access['instructor']:
+    if (settings.FEATURES.get('INDIVIDUAL_DUE_DATES') and access['instructor']):
         sections.insert(3, _section_extensions(course))
 
     # Gate access to course email by feature flag & by course-specific authorization
@@ -149,19 +135,6 @@ def instructor_dashboard_2(request, course_id):
     if course_mode_has_price and (access['finance_admin'] or access['sales_admin']):
         sections.append(_section_e_commerce(course, access, paid_modes[0], is_white_label, is_white_label))
 
-    # Gate access to Special Exam tab depending if either timed exams or proctored exams
-    # are enabled in the course
-
-    # NOTE: For now, if we only have procotred exams enabled, then only platform Staff
-    # (user.is_staff) will be able to view the special exams tab. This may
-    # change in the future
-    can_see_special_exams = (
-        ((course.enable_proctored_exams and request.user.is_staff) or course.enable_timed_exams) and
-        settings.FEATURES.get('ENABLE_SPECIAL_EXAMS', False)
-    )
-    if can_see_special_exams:
-        sections.append(_section_special_exams(course, access))
-
     # Certificates panel
     # This is used to generate example certificates
     # and enable self-generated certificates for a course.
@@ -171,42 +144,92 @@ def instructor_dashboard_2(request, course_id):
 
     disable_buttons = not _is_small_course(course_key)
 
-    certificate_white_list = CertificateWhitelist.get_certificate_white_list(course_key)
-    generate_certificate_exceptions_url = reverse(  # pylint: disable=invalid-name
-        'generate_certificate_exceptions',
-        kwargs={'course_id': unicode(course_key), 'generate_for': ''}
-    )
-    generate_bulk_certificate_exceptions_url = reverse(  # pylint: disable=invalid-name
-        'generate_bulk_certificate_exceptions',
-        kwargs={'course_id': unicode(course_key)}
-    )
-    certificate_exception_view_url = reverse(
-        'certificate_exception_view',
-        kwargs={'course_id': unicode(course_key)}
-    )
-
-    certificate_invalidation_view_url = reverse(  # pylint: disable=invalid-name
-        'certificate_invalidation_view',
-        kwargs={'course_id': unicode(course_key)}
-    )
-
-    certificate_invalidations = CertificateInvalidation.get_certificate_invalidations(course_key)
+    analytics_dashboard_message = None
+    if settings.ANALYTICS_DASHBOARD_URL:
+        # Construct a URL to the external analytics dashboard
+        analytics_dashboard_url = '{0}/courses/{1}'.format(settings.ANALYTICS_DASHBOARD_URL, unicode(course_key))
+        link_start = "<a href=\"{}\" target=\"_blank\">".format(analytics_dashboard_url)
+        analytics_dashboard_message = _("To gain insights into student enrollment and participation {link_start}visit {analytics_dashboard_name}, our new course analytics product{link_end}.")
+        analytics_dashboard_message = analytics_dashboard_message.format(
+            link_start=link_start, link_end="</a>", analytics_dashboard_name=settings.ANALYTICS_DASHBOARD_NAME)
 
     context = {
         'course': course,
+        'old_dashboard_url': reverse('instructor_dashboard_legacy', kwargs={'course_id': unicode(course_key)}),
         'studio_url': get_studio_url(course, 'course'),
         'sections': sections,
         'disable_buttons': disable_buttons,
         'analytics_dashboard_message': analytics_dashboard_message,
-        'certificate_white_list': certificate_white_list,
-        'certificate_invalidations': certificate_invalidations,
-        'generate_certificate_exceptions_url': generate_certificate_exceptions_url,
-        'generate_bulk_certificate_exceptions_url': generate_bulk_certificate_exceptions_url,
-        'certificate_exception_view_url': certificate_exception_view_url,
-        'certificate_invalidation_view_url': certificate_invalidation_view_url,
+        'is_assessment': check_assessment(course.wiki_slug),
+        'is_assessment_ing' : check_assessment_ing(course_key.course),
+        'is_assessment_done' : check_assessment_done(course_key.course)
     }
 
     return render_to_response('instructor/instructor_dashboard_2/instructor_dashboard_2.html', context)
+
+
+def check_assessment(active_versions_key):
+    client = MongoClient(settings.CONTENTSTORE.get('DOC_STORE_CONFIG').get('host'), settings.CONTENTSTORE.get('DOC_STORE_CONFIG').get('port'))
+    db = client.edxapp
+
+    cursor = db.modulestore.active_versions.find({'search_targets.wiki_slug':active_versions_key})
+    for document in cursor:
+        assessmentId = document.get('versions').get('published-branch')
+    cursor.close()
+
+    cursor = db.modulestore.structures.find({'_id':assessmentId})
+    for document in cursor:
+        blocks = document.get('blocks')
+    cursor.close()
+    client.close()
+    is_assessment = False
+    for block in blocks:
+        if block.get('block_type') == 'openassessment':
+            is_assessment = True
+
+    return is_assessment
+
+
+def check_assessment_ing(course_id):
+    con = mdb.connect(settings.DATABASES.get('default').get('HOST'), settings.DATABASES.get('default').get('USER'), settings.DATABASES.get('default').get('PASSWORD'), settings.DATABASES.get('default').get('NAME'));
+    cur = con.cursor()
+    query = "select class_id from vw_copykiller where class_id = '"+course_id+"'"
+    cur.execute(query)
+    cur_rowcount = cur.rowcount
+    cur.close()
+    con.close()
+    if cur_rowcount > 0:
+        return True
+    else:
+        return False
+
+
+def check_assessment_done(course_id):
+    con = mdb.connect(settings.DATABASES.get('default').get('HOST'), settings.DATABASES.get('default').get('USER'), settings.DATABASES.get('default').get('PASSWORD'), settings.DATABASES.get('default').get('NAME'));
+    cur = con.cursor()
+
+    query = "select count(uri) from vw_copykiller where class_id ='"+course_id+"'"
+    cur.execute(query)
+    result = cur.fetchone()
+    if result[0] == 0:
+        return False
+
+    query2 = "select "
+    query2 += "    if(count(uri) = ("+query+"), 'True', 'False') complete "
+    query2 += "from tb_copykiller_copyratio "
+    query2 += "where "
+    query2 += "    uri in (select uri from vw_copykiller where class_id ='"+course_id+"') "
+    query2 += "and "
+    query2 += "    complete_status = 'Y' and check_type='internet'"
+    cur.execute(query2)
+    result = cur.fetchone()
+    cur.close()
+    con.close()
+
+    if result[0] == 'True':
+        return True
+    else:
+        return False
 
 
 ## Section functions starting with _section return a dictionary of section data.
@@ -269,19 +292,6 @@ def _section_e_commerce(course, access, paid_mode, coupons_enabled, reports_enab
     return section_data
 
 
-def _section_special_exams(course, access):
-    """ Provide data for the corresponding dashboard section """
-    course_key = course.id
-
-    section_data = {
-        'section_key': 'special_exams',
-        'section_display_name': _('Special Exams'),
-        'access': access,
-        'course_id': unicode(course_key)
-    }
-    return section_data
-
-
 def _section_certificates(course):
     """Section information for the certificates panel.
 
@@ -296,30 +306,21 @@ def _section_certificates(course):
         dict
 
     """
-    example_cert_status = None
-    html_cert_enabled = certs_api.has_html_certificates_enabled(course.id, course)
-    if html_cert_enabled:
-        can_enable_for_course = True
-    else:
-        example_cert_status = certs_api.example_certificates_status(course.id)
+    example_cert_status = certs_api.example_certificates_status(course.id)
 
-        # Allow the user to enable self-generated certificates for students
-        # *only* once a set of example certificates has been successfully generated.
-        # If certificates have been misconfigured for the course (for example, if
-        # the PDF template hasn't been uploaded yet), then we don't want
-        # to turn on self-generated certificates for students!
-        can_enable_for_course = (
-            example_cert_status is not None and
-            all(
-                cert_status['status'] == 'success'
-                for cert_status in example_cert_status
-            )
+    # Allow the user to enable self-generated certificates for students
+    # *only* once a set of example certificates has been successfully generated.
+    # If certificates have been misconfigured for the course (for example, if
+    # the PDF template hasn't been uploaded yet), then we don't want
+    # to turn on self-generated certificates for students!
+    can_enable_for_course = (
+        example_cert_status is not None and
+        all(
+            cert_status['status'] == 'success'
+            for cert_status in example_cert_status
         )
+    )
     instructor_generation_enabled = settings.FEATURES.get('CERTIFICATES_INSTRUCTOR_GENERATION', False)
-    certificate_statuses_with_count = {
-        certificate['status']: certificate['count']
-        for certificate in GeneratedCertificate.get_unique_statuses(course_key=course.id)
-    }
 
     return {
         'section_key': 'certificates',
@@ -328,12 +329,6 @@ def _section_certificates(course):
         'can_enable_for_course': can_enable_for_course,
         'enabled_for_course': certs_api.cert_generation_enabled(course.id),
         'instructor_generation_enabled': instructor_generation_enabled,
-        'html_cert_enabled': html_cert_enabled,
-        'active_certificate': certs_api.get_active_web_certificate(course),
-        'certificate_statuses_with_count': certificate_statuses_with_count,
-        'status': CertificateStatuses,
-        'certificate_generation_history':
-            CertificateGenerationHistory.objects.filter(course_id=course.id).order_by("-created"),
         'urls': {
             'generate_example_certificates': reverse(
                 'generate_example_certificates',
@@ -345,10 +340,6 @@ def _section_certificates(course):
             ),
             'start_certificate_generation': reverse(
                 'start_certificate_generation',
-                kwargs={'course_id': course.id}
-            ),
-            'start_certificate_regeneration': reverse(
-                'start_certificate_regeneration',
                 kwargs={'course_id': course.id}
             ),
             'list_instructor_tasks_url': reverse(
@@ -385,7 +376,7 @@ def set_course_mode_price(request, course_id):
 
     CourseModesArchive.objects.create(
         course_id=course_id, mode_slug='honor', mode_display_name='Honor Code Certificate',
-        min_price=course_honor_mode[0].min_price, currency=course_honor_mode[0].currency,
+        min_price=getattr(course_honor_mode[0], 'min_price'), currency=getattr(course_honor_mode[0], 'currency'),
         expiration_datetime=datetime.datetime.now(pytz.utc), expiration_date=datetime.date.today()
     )
     course_honor_mode.update(
@@ -407,9 +398,6 @@ def _section_course_info(course, access):
         'course_display_name': course.display_name,
         'has_started': course.has_started(),
         'has_ended': course.has_ended(),
-        'start_date': get_default_time_display(course.start),
-        'end_date': get_default_time_display(course.end) or _('No end date set'),
-        'num_sections': len(course.children),
         'list_instructor_tasks_url': reverse('list_instructor_tasks', kwargs={'course_id': unicode(course_key)}),
     }
 
@@ -425,9 +413,8 @@ def _section_course_info(course, access):
         section_data['detailed_gitlogs_url'] = reverse('gitlogs_detail', kwargs={'course_id': unicode(course_key)})
 
     try:
-        sorted_cutoffs = sorted(course.grade_cutoffs.items(), key=lambda i: i[1], reverse=True)
         advance = lambda memo, (letter, score): "{}: {}, ".format(letter, score) + memo
-        section_data['grade_cutoffs'] = reduce(advance, sorted_cutoffs, "")[:-2]
+        section_data['grade_cutoffs'] = reduce(advance, course.grade_cutoffs.items(), "")[:-2]
     except Exception:  # pylint: disable=broad-except
         section_data['grade_cutoffs'] = "Not Available"
     # section_data['offline_grades'] = offline_grades_available(course_key)
@@ -539,34 +526,20 @@ def _section_extensions(course):
 def _section_data_download(course, access):
     """ Provide data for the corresponding dashboard section """
     course_key = course.id
-
-    show_proctored_report_button = (
-        settings.FEATURES.get('ENABLE_SPECIAL_EXAMS', False) and
-        course.enable_proctored_exams
-    )
-
     section_data = {
         'section_key': 'data_download',
         'section_display_name': _('Data Download'),
         'access': access,
-        'show_generate_proctored_exam_report_button': show_proctored_report_button,
-        'get_problem_responses_url': reverse('get_problem_responses', kwargs={'course_id': unicode(course_key)}),
         'get_grading_config_url': reverse('get_grading_config', kwargs={'course_id': unicode(course_key)}),
         'get_students_features_url': reverse('get_students_features', kwargs={'course_id': unicode(course_key)}),
-        'get_issued_certificates_url': reverse(
-            'get_issued_certificates', kwargs={'course_id': unicode(course_key)}
-        ),
         'get_students_who_may_enroll_url': reverse(
             'get_students_who_may_enroll', kwargs={'course_id': unicode(course_key)}
         ),
         'get_anon_ids_url': reverse('get_anon_ids', kwargs={'course_id': unicode(course_key)}),
-        'list_proctored_results_url': reverse('get_proctored_exam_results', kwargs={'course_id': unicode(course_key)}),
         'list_instructor_tasks_url': reverse('list_instructor_tasks', kwargs={'course_id': unicode(course_key)}),
         'list_report_downloads_url': reverse('list_report_downloads', kwargs={'course_id': unicode(course_key)}),
         'calculate_grades_csv_url': reverse('calculate_grades_csv', kwargs={'course_id': unicode(course_key)}),
         'problem_grade_report_url': reverse('problem_grade_report', kwargs={'course_id': unicode(course_key)}),
-        'course_has_survey': True if course.course_survey_name else False,
-        'course_survey_results_url': reverse('get_course_survey_results', kwargs={'course_id': unicode(course_key)}),
     }
     return section_data
 
@@ -632,19 +605,18 @@ def _get_dashboard_link(course_key):
 def _section_analytics(course, access):
     """ Provide data for the corresponding dashboard section """
     course_key = course.id
-    analytics_dashboard_url = '{0}/courses/{1}'.format(settings.ANALYTICS_DASHBOARD_URL, unicode(course_key))
-    link_start = "<a href=\"{}\" target=\"_blank\">".format(analytics_dashboard_url)
-    insights_message = _("For analytics about your course, go to {analytics_dashboard_name}.")
-
-    insights_message = insights_message.format(
-        analytics_dashboard_name=u'{0}{1}</a>'.format(link_start, settings.ANALYTICS_DASHBOARD_NAME)
-    )
     section_data = {
         'section_key': 'instructor_analytics',
         'section_display_name': _('Analytics'),
         'access': access,
-        'insights_message': insights_message,
+        'get_distribution_url': reverse('get_distribution', kwargs={'course_id': unicode(course_key)}),
+        'proxy_legacy_analytics_url': reverse('proxy_legacy_analytics', kwargs={'course_id': unicode(course_key)}),
     }
+
+    if settings.ANALYTICS_DASHBOARD_URL:
+        dashboard_link = _get_dashboard_link(course_key)
+        message = _("Demographic data is now available in {dashboard_link}.").format(dashboard_link=dashboard_link)
+        section_data['demographic_message'] = message
 
     return section_data
 
@@ -664,3 +636,153 @@ def _section_metrics(course, access):
         'post_metrics_data_csv_url': reverse('post_metrics_data_csv'),
     }
     return section_data
+
+
+def return_course(course_id):
+    try:
+        course_key = CourseKey.from_string(course_id)
+    except InvalidKeyError:
+        log.error(u"Unable to find course with course key %s while loading the Instructor Dashboard.", course_id)
+        return HttpResponseServerError()
+
+    course = get_course_by_id(course_key, depth=0)
+
+    return course
+
+
+def get_assessment_info(course):
+    client = MongoClient(settings.CONTENTSTORE.get('DOC_STORE_CONFIG').get('host'), settings.CONTENTSTORE.get('DOC_STORE_CONFIG').get('port'))
+    db = client.edxapp
+    cursor = db.modulestore.active_versions.find({'search_targets.wiki_slug':course.wiki_slug})
+    for document in cursor:
+        published_branch = document.get('versions').get('published-branch')
+    cursor.close()
+    cursor = db.modulestore.structures.find({'_id':published_branch})
+    for document in cursor:
+        blocks = document.get('blocks')
+        for block in blocks:
+            fields = block.get('fields')
+            if (block.get('block_type') == 'openassessment') and fields.has_key('submission_start') and fields.has_key('submission_due'):
+                arr_submission_start = fields['submission_start'].split('+')
+                arr_submission_due = fields['submission_due'].split('+')
+                accessment_info = {'display_name': fields['display_name'], 'submission_start': arr_submission_start[0].replace('-', '').replace(':', '').replace('T', ''), 'submission_due': arr_submission_due[0].replace('-', '').replace(':', '').replace('T', '')}
+    cursor.close()
+    client.close()
+
+    return accessment_info
+
+
+def create_temp_answer(course_id):
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
+    con = mdb.connect(settings.DATABASES.get('default').get('HOST'), settings.DATABASES.get('default').get('USER'), settings.DATABASES.get('default').get('PASSWORD'), settings.DATABASES.get('default').get('NAME'));
+    query = "delete from tb_tmp_answer where course_id = '"+course_id+"'"
+    cur = con.cursor()
+    cur.execute(query)
+
+    query1 = "select uuid, raw_answer from submissions_submission "
+    arr_course_id = course_id.split('+')
+    query3 = "delete from vw_copykiller where class_id='"+arr_course_id[1]+"'"
+    with con:
+        cur.execute("set names utf8")
+        cur.execute(query1)
+        for (uuid, raw_answer) in cur:
+            answer = raw_answer.replace('{"parts": [{"text": "', '').replace('"}]}','')
+            answer = answer.decode('unicode_escape')
+            answer = answer.replace("\'", "\\\'")
+            answer = answer.encode('utf-8')
+            answer = answer.decode('utf-8')
+            query2 = "insert into tb_tmp_answer (course_id, uuid, raw_answer) "
+            query2 += "select '"+course_id+"', '"+uuid+"', '"+answer+"' "
+            query2 = str(query2)
+            cur.execute(query2)
+        cur.execute(query3)
+    cur.close()
+    con.close()
+
+
+def copykiller(request, course_id):
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
+    course = return_course(course_id)
+    assessment_info = get_assessment_info(course)
+    create_temp_answer(course_id)
+    con = mdb.connect(settings.DATABASES.get('default').get('HOST'), settings.DATABASES.get('default').get('USER'), settings.DATABASES.get('default').get('PASSWORD'), settings.DATABASES.get('default').get('NAME'));
+    query = "insert into vw_copykiller"
+    query += "( uri, year_id, year_name, term_id, term_name, class_id, class_name, report_id, report_name,"
+    query += "student_id, student_name, student_number, start_date, end_date, submit_date, title, content ) "
+    query += "select "
+    query += "submission_uuid, "
+    query += "year(curdate()) year_id, concat(year(curdate()), '년') year_name, "
+    query += "'" + str(course.id.run) + "' term_id, '" + str(course.id.run) + "' term_name, "
+    query += "'" + str(course.id.course) + "' class_id, '"+ str(course.display_name) +"' class_name, "
+    query += "item_id report_id, '"+str(assessment_info['display_name'])+"' report_name, "
+    query += "(select user.username from auth_user user where user.id=(select anony.user_id from student_anonymoususerid anony where anony.anonymous_user_id=student_id)) student_id, "
+    query += "(select profile.name from auth_userprofile profile where profile.id=(select anony.user_id from student_anonymoususerid anony where anony.anonymous_user_id=student_id)) student_name, "
+    query += "(select user.id from auth_user user where user.id=(select anony.user_id from student_anonymoususerid anony where anony.anonymous_user_id=student_id)) student_number, "
+    query += "'"+str(assessment_info['submission_start'])+"' start_date, "
+    query += "'"+str(assessment_info['submission_due'])+"' end_date, "
+    query += "completed_at submit_date, "
+    query += "'"+str(assessment_info['display_name'])+"' title, "
+    query += "(select answer.raw_answer from tb_tmp_answer answer where answer.uuid=submission_uuid) content "
+    query += "from "
+    query += "assessment_peerworkflow "
+    query += "where "
+    query += "completed_at is not null and item_id not like '%DEMOk%' and course_id = '"+str(course_id)+"'"
+    query1 = "delete from tb_tmp_answer"
+
+    with con:
+        cur = con.cursor()
+        cur.execute("set names utf8")
+        cur.execute(query)
+        cur.execute(query1)
+    cur.close()
+    con.close()
+
+    response_data = {}
+    response_data['result'] = 'success'
+    return HttpResponse(simplejson.dumps(response_data), mimetype='application/javascript')
+
+
+def get_copykiller_result(request, course_id):
+    con = mdb.connect(settings.DATABASES.get('default').get('HOST'), settings.DATABASES.get('default').get('USER'), settings.DATABASES.get('default').get('PASSWORD'), settings.DATABASES.get('default').get('NAME'));
+    cur = con.cursor()
+    query = "select "
+    query += "v.student_id, "
+    query += "v.report_id assessment_no, "
+    query += "concat('http://pjsearch.kmooc.kr:8080/ckplus/copykiller.jsp?uri=', v.uri, '&property=0&lang=ko') total_link, "
+    query += "concat('http://pjsearch.kmooc.kr:8080/ckplus/copykiller.jsp?uri=', v.uri, '&property=1&lang=ko') year_link, "
+    query += "concat('http://pjsearch.kmooc.kr:8080/ckplus/copykiller.jsp?uri=', v.uri, '&property=2&lang=ko') term_link, "
+    query += "concat('http://pjsearch.kmooc.kr:8080/ckplus/copykiller.jsp?uri=', v.uri, '&property=3&lang=ko') class_link, "
+    query += "concat('http://pjsearch.kmooc.kr:8080/ckplus/copykiller.jsp?uri=', v.uri, '&property=4&lang=ko') report_link, "
+    query += "concat('http://pjsearch.kmooc.kr:8080/ckplus/copykiller.jsp?uri=', v.uri, '&property=100&lang=ko') internet_link, "
+    query += "(select r.disp_total_copy_ratio from tb_copykiller_copyratio r where r.uri=v.uri and r.check_type='total') total, "
+    query += "(select r.disp_total_copy_ratio from tb_copykiller_copyratio r where r.uri=v.uri and r.check_type='year') year, "
+    query += "(select r.disp_total_copy_ratio from tb_copykiller_copyratio r where r.uri=v.uri and r.check_type='term') term, "
+    query += "(select r.disp_total_copy_ratio from tb_copykiller_copyratio r where r.uri=v.uri and r.check_type='class') class, "
+    query += "(select r.disp_total_copy_ratio from tb_copykiller_copyratio r where r.uri=v.uri and r.check_type='report') report, "
+    query += "(select r.disp_total_copy_ratio from tb_copykiller_copyratio r where r.uri=v.uri and r.check_type='internet') internet "
+    query += "from "
+    query += "vw_copykiller v "
+    query += "where "
+    query += "v.uri in (select uri from tb_copykiller_copyratio) "
+    query += "order by assessment_no, student_id "
+    cur.execute(query)
+    rows = cur.fetchall()
+    cur.close()
+    con.close()
+    result_list = list()
+    for row in rows:
+        result_list.append(row[0:])
+    return result_list
+
+
+def copykiller_csv(request, course_id):
+    result_list = get_copykiller_result(request, course_id)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="'+course_id+'.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['student id', 'assessment no', 'total link', 'year link', 'term link', 'class link', 'report link', 'internet link', 'total', 'year', 'term', 'class', 'report', 'internet'])
+    for value in result_list:
+        writer.writerow(value)
+    return response

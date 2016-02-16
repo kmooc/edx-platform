@@ -27,19 +27,13 @@ from lms.lib.comment_client.comment import Comment
 from lms.lib.comment_client.thread import Thread
 from student.tests.factories import UserFactory
 from util.testing import UrlResetMixin
-from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 from openedx.core.djangoapps.course_groups.tests.helpers import CohortFactory
 
 
 @ddt.ddt
 class SerializerTestMixin(CommentsServiceMockMixin, UrlResetMixin):
-    @classmethod
-    @mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_DISCUSSION_SERVICE": True})
-    def setUpClass(cls):
-        super(SerializerTestMixin, cls).setUpClass()
-        cls.course = CourseFactory.create()
-
     @mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_DISCUSSION_SERVICE": True})
     def setUp(self):
         super(SerializerTestMixin, self).setUp()
@@ -51,6 +45,7 @@ class SerializerTestMixin(CommentsServiceMockMixin, UrlResetMixin):
         self.register_get_user_response(self.user)
         self.request = RequestFactory().get("/dummy")
         self.request.user = self.user
+        self.course = CourseFactory.create()
         self.author = UserFactory.create()
 
     def create_role(self, role_name, users, course=None):
@@ -94,11 +89,11 @@ class SerializerTestMixin(CommentsServiceMockMixin, UrlResetMixin):
         self.assertEqual(actual_serialized_anonymous, expected_serialized_anonymous)
 
     @ddt.data(
-        (FORUM_ROLE_ADMINISTRATOR, False, "Staff"),
+        (FORUM_ROLE_ADMINISTRATOR, False, "staff"),
         (FORUM_ROLE_ADMINISTRATOR, True, None),
-        (FORUM_ROLE_MODERATOR, False, "Staff"),
+        (FORUM_ROLE_MODERATOR, False, "staff"),
         (FORUM_ROLE_MODERATOR, True, None),
-        (FORUM_ROLE_COMMUNITY_TA, False, "Community TA"),
+        (FORUM_ROLE_COMMUNITY_TA, False, "community_ta"),
         (FORUM_ROLE_COMMUNITY_TA, True, None),
         (FORUM_ROLE_STUDENT, False, None),
         (FORUM_ROLE_STUDENT, True, None),
@@ -108,7 +103,7 @@ class SerializerTestMixin(CommentsServiceMockMixin, UrlResetMixin):
         """
         Test correctness of the author_label field.
 
-        The label should be "Staff", "Staff", or "Community TA" for the
+        The label should be "staff", "staff", or "community_ta" for the
         Administrator, Moderator, and Community TA roles, respectively, but
         the label should not be present if the content is anonymous.
 
@@ -133,7 +128,7 @@ class SerializerTestMixin(CommentsServiceMockMixin, UrlResetMixin):
 
 
 @ddt.ddt
-class ThreadSerializerSerializationTest(SerializerTestMixin, SharedModuleStoreTestCase):
+class ThreadSerializerSerializationTest(SerializerTestMixin, ModuleStoreTestCase):
     """Tests for ThreadSerializer serialization."""
     def make_cs_content(self, overrides):
         """
@@ -143,9 +138,6 @@ class ThreadSerializerSerializationTest(SerializerTestMixin, SharedModuleStoreTe
             "course_id": unicode(self.course.id),
             "user_id": str(self.author.id),
             "username": self.author.username,
-            "read": True,
-            "endorsed": True,
-            "resp_total": 0,
         }
         merged_overrides.update(overrides)
         return make_minimal_cs_thread(merged_overrides)
@@ -179,9 +171,6 @@ class ThreadSerializerSerializationTest(SerializerTestMixin, SharedModuleStoreTe
             "votes": {"up_count": 4},
             "comments_count": 5,
             "unread_comments_count": 3,
-            "read": False,
-            "endorsed": False,
-            "response_count": None,
         }
         expected = {
             "id": "test_thread",
@@ -203,14 +192,12 @@ class ThreadSerializerSerializationTest(SerializerTestMixin, SharedModuleStoreTe
             "abuse_flagged": False,
             "voted": False,
             "vote_count": 4,
-            "comment_count": 6,
-            "unread_comment_count": 4,
+            "comment_count": 5,
+            "unread_comment_count": 3,
             "comment_list_url": "http://testserver/api/discussion/v1/comments/?thread_id=test_thread",
             "endorsed_comment_list_url": None,
             "non_endorsed_comment_list_url": None,
-            "editable_fields": ["abuse_flagged", "following", "read", "voted"],
-            "read": False,
-            "has_endorsed": False,
+            "editable_fields": ["abuse_flagged", "following", "voted"],
         }
         self.assertEqual(self.serialize(thread), expected)
 
@@ -250,22 +237,9 @@ class ThreadSerializerSerializationTest(SerializerTestMixin, SharedModuleStoreTe
         serialized = self.serialize(self.make_cs_content({"id": thread_id}))
         self.assertEqual(serialized["following"], True)
 
-    def test_response_count(self):
-        thread_data = self.make_cs_content({"resp_total": 2})
-        self.register_get_thread_response(thread_data)
-        serialized = self.serialize(Thread(id=thread_data["id"]))
-        self.assertEqual(serialized["response_count"], 2)
-
-    def test_response_count_missing(self):
-        thread_data = self.make_cs_content({})
-        del thread_data["resp_total"]
-        self.register_get_thread_response(thread_data)
-        serialized = self.serialize(Thread(id=thread_data["id"]))
-        self.assertNotIn("response_count", serialized)
-
 
 @ddt.ddt
-class CommentSerializerTest(SerializerTestMixin, SharedModuleStoreTestCase):
+class CommentSerializerTest(SerializerTestMixin, ModuleStoreTestCase):
     """Tests for CommentSerializer."""
     def setUp(self):
         super(CommentSerializerTest, self).setUp()
@@ -367,9 +341,9 @@ class CommentSerializerTest(SerializerTestMixin, SharedModuleStoreTestCase):
         self.assertEqual(actual_endorser_anonymous, expected_endorser_anonymous)
 
     @ddt.data(
-        (FORUM_ROLE_ADMINISTRATOR, "Staff"),
-        (FORUM_ROLE_MODERATOR, "Staff"),
-        (FORUM_ROLE_COMMUNITY_TA, "Community TA"),
+        (FORUM_ROLE_ADMINISTRATOR, "staff"),
+        (FORUM_ROLE_MODERATOR, "staff"),
+        (FORUM_ROLE_COMMUNITY_TA, "community_ta"),
         (FORUM_ROLE_STUDENT, None),
     )
     @ddt.unpack
@@ -377,7 +351,7 @@ class CommentSerializerTest(SerializerTestMixin, SharedModuleStoreTestCase):
         """
         Test correctness of the endorsed_by_label field.
 
-        The label should be "Staff", "Staff", or "Community TA" for the
+        The label should be "staff", "staff", or "community_ta" for the
         Administrator, Moderator, and Community TA roles, respectively.
 
         role_name is the name of the author's role.
@@ -422,20 +396,15 @@ class CommentSerializerTest(SerializerTestMixin, SharedModuleStoreTestCase):
 
 
 @ddt.ddt
-class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixin, SharedModuleStoreTestCase):
+class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixin, ModuleStoreTestCase):
     """Tests for ThreadSerializer deserialization."""
-    @classmethod
-    @mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_DISCUSSION_SERVICE": True})
-    def setUpClass(cls):
-        super(ThreadSerializerDeserializationTest, cls).setUpClass()
-        cls.course = CourseFactory.create()
-
     @mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_DISCUSSION_SERVICE": True})
     def setUp(self):
         super(ThreadSerializerDeserializationTest, self).setUp()
         httpretty.reset()
         httpretty.enable()
         self.addCleanup(httpretty.disable)
+        self.course = CourseFactory.create()
         self.user = UserFactory.create()
         self.register_get_user_response(self.user)
         self.request = RequestFactory().get("/dummy")
@@ -455,8 +424,6 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
             "title": "Original Title",
             "body": "Original body",
             "user_id": str(self.user.id),
-            "read": "False",
-            "endorsed": "False"
         }))
 
     def save_and_reserialize(self, data, instance=None):
@@ -529,10 +496,9 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
         data = self.minimal_data.copy()
         data.update({field: value for field in ["topic_id", "title", "raw_body"]})
         serializer = ThreadSerializer(data=data, context=get_context(self.course, self.request))
-        self.assertFalse(serializer.is_valid())
         self.assertEqual(
             serializer.errors,
-            {field: ["This field may not be blank."] for field in ["topic_id", "title", "raw_body"]}
+            {field: ["This field is required."] for field in ["topic_id", "title", "raw_body"]}
         )
 
     def test_create_type(self):
@@ -561,20 +527,16 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
                 "closed": ["False"],
                 "pinned": ["False"],
                 "user_id": [str(self.user.id)],
-                "read": ["False"],
-                "requested_user_id": [str(self.user.id)],
             }
         )
 
-    @ddt.data(True, False)
-    def test_update_all(self, read):
+    def test_update_all(self):
         self.register_put_thread_response(self.existing_thread.attributes)
         data = {
             "topic_id": "edited_topic",
             "type": "question",
             "title": "Edited Title",
             "raw_body": "Edited body",
-            "read": read,
         }
         saved = self.save_and_reserialize(data, self.existing_thread)
         self.assertEqual(
@@ -590,8 +552,6 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
                 "closed": ["False"],
                 "pinned": ["False"],
                 "user_id": [str(self.user.id)],
-                "read": [str(read)],
-                "requested_user_id": [str(self.user.id)],
             }
         )
         for key in data:
@@ -605,10 +565,9 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
             partial=True,
             context=get_context(self.course, self.request)
         )
-        self.assertFalse(serializer.is_valid())
         self.assertEqual(
             serializer.errors,
-            {field: ["This field may not be blank."] for field in ["topic_id", "title", "raw_body"]}
+            {field: ["This field is required."] for field in ["topic_id", "title", "raw_body"]}
         )
 
     def test_update_course_id(self):
@@ -618,7 +577,6 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
             partial=True,
             context=get_context(self.course, self.request)
         )
-        self.assertFalse(serializer.is_valid())
         self.assertEqual(
             serializer.errors,
             {"course_id": ["This field is not allowed in an update."]}
@@ -626,18 +584,14 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
 
 
 @ddt.ddt
-class CommentSerializerDeserializationTest(CommentsServiceMockMixin, SharedModuleStoreTestCase):
+class CommentSerializerDeserializationTest(CommentsServiceMockMixin, ModuleStoreTestCase):
     """Tests for ThreadSerializer deserialization."""
-    @classmethod
-    def setUpClass(cls):
-        super(CommentSerializerDeserializationTest, cls).setUpClass()
-        cls.course = CourseFactory.create()
-
     def setUp(self):
         super(CommentSerializerDeserializationTest, self).setUp()
         httpretty.reset()
         httpretty.enable()
         self.addCleanup(httpretty.disable)
+        self.course = CourseFactory.create()
         self.user = UserFactory.create()
         self.register_get_user_response(self.user)
         self.request = RequestFactory().get("/dummy")
@@ -784,7 +738,7 @@ class CommentSerializerDeserializationTest(CommentsServiceMockMixin, SharedModul
                     data["parent_id"] = None
                 serializer = CommentSerializer(data=data, context=context)
                 self.assertFalse(serializer.is_valid())
-                self.assertEqual(serializer.errors, {"non_field_errors": ["Comment level is too deep."]})
+                self.assertEqual(serializer.errors, {"parent_id": ["Comment level is too deep."]})
 
     def test_create_missing_field(self):
         for field in self.minimal_data:
@@ -870,10 +824,9 @@ class CommentSerializerDeserializationTest(CommentsServiceMockMixin, SharedModul
             partial=True,
             context=get_context(self.course, self.request)
         )
-        self.assertFalse(serializer.is_valid())
         self.assertEqual(
             serializer.errors,
-            {"raw_body": ["This field may not be blank."]}
+            {"raw_body": ["This field is required."]}
         )
 
     @ddt.data("thread_id", "parent_id")
@@ -884,7 +837,6 @@ class CommentSerializerDeserializationTest(CommentsServiceMockMixin, SharedModul
             partial=True,
             context=get_context(self.course, self.request)
         )
-        self.assertFalse(serializer.is_valid())
         self.assertEqual(
             serializer.errors,
             {field: ["This field is not allowed in an update."]}

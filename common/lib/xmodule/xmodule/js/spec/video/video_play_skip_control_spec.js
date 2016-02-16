@@ -25,6 +25,14 @@
             expect($('.video_control.play')).toExist();
         });
 
+        it('add ARIA attributes to play control', function () {
+            expect($('.video_control.play')).toHaveAttrs({
+                'role': 'button',
+                'title': 'Play',
+                'aria-disabled': 'false'
+            });
+        });
+
         it('can update state on play', function () {
             state.el.trigger('play');
             expect($('.video_control.play')).not.toExist();

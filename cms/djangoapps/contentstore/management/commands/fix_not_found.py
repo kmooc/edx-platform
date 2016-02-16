@@ -13,14 +13,12 @@ class Command(BaseCommand):
     """Fix a course's item not found errors"""
     help = "Fix a course's ItemNotFound errors"
 
-    def add_arguments(self, parser):
-        parser.add_argument('course_id')
-
     def handle(self, *args, **options):
-        """Execute the command"""
-        course_id = options.get('course_id', None)
+        "Execute the command"
+        if len(args) != 1:
+            raise CommandError("requires 1 argument: <course_id>")
 
-        course_key = CourseKey.from_string(course_id)
+        course_key = CourseKey.from_string(args[0])
         # for now only support on split mongo
         # pylint: disable=protected-access
         owning_store = modulestore()._get_modulestore_for_courselike(course_key)

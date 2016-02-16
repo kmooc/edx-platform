@@ -1,14 +1,13 @@
 define([
-    'underscore',
     'common/js/components/views/paging_header',
     'common/js/components/collections/paging_collection'
-], function (_, PagingHeader, PagingCollection) {
+], function (PagingHeader, PagingCollection) {
         'use strict';
         describe('PagingHeader', function () {
             var pagingHeader,
                 newCollection = function (size, perPage) {
                     var pageSize = 5,
-                        results = _.map(_.range(size), function (i) { return {foo: i}; });
+                        results = _.map(_.range(size), function () { return {}; });
                     var collection = new PagingCollection(
                         {
                             count: results.length,
@@ -22,14 +21,6 @@ define([
                     collection.start = 0;
                     collection.totalCount = results.length;
                     return collection;
-                },
-                sortableHeader = function (sortable) {
-                    var collection = newCollection(5, 4);
-                    collection.registerSortableField('foo', 'Display Name');
-                    return new PagingHeader({
-                        collection: collection,
-                        showSortControls: _.isUndefined(sortable) ? true : sortable
-                    });
                 };
 
             it('correctly displays which items are being viewed', function () {
@@ -54,17 +45,6 @@ define([
                 }).render();
                 expect(pagingHeader.$el.find('.search-count').text())
                     .toContain('Showing 1 out of 1 total');
-            });
-
-            it('optionally shows sorting controls', function () {
-                pagingHeader = sortableHeader().render();
-                expect(pagingHeader.$el.find('.listing-sort').text())
-                    .toMatch(/Sorted by\s+Display Name/);
-            });
-
-            it('does not show sorting controls if the `showSortControls` option is not passed', function () {
-                pagingHeader = sortableHeader(false).render();
-                expect(pagingHeader.$el.text()).not.toContain('Sorted by');
             });
         });
     });

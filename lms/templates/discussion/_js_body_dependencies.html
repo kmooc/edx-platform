@@ -1,3 +1,4 @@
-<%page args="disable_fast_preview=True"/>
+<%! from django_comment_client.helpers import include_mustache_templates %>
 
-<%include file="/mathjax_include.html" args="disable_fast_preview=disable_fast_preview"/>
+<%include file="/mathjax_include.html" />
+${include_mustache_templates()}

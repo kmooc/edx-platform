@@ -33,6 +33,8 @@
 
             it('add ARIA attributes to quality control', function () {
                 expect(qualityControl.el).toHaveAttrs({
+                    'role': 'button',
+                    'title': 'HD off',
                     'aria-disabled': 'false'
                 });
             });
@@ -115,7 +117,7 @@
             it('does not contain the quality control', function () {
                 state =  jasmine.initializePlayer();
 
-                expect(state.el.find('.quality-control').length).toBe(0);
+                expect(state.el.find('a.quality-control').length).toBe(0);
             });
         });
     });

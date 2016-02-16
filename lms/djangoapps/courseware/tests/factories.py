@@ -6,7 +6,9 @@ import factory
 from factory.django import DjangoModelFactory
 
 # Imported to re-export
+# pylint: disable=unused-import
 from student.tests.factories import UserFactory  # Imported to re-export
+# pylint: enable=unused-import
 
 from student.tests.factories import UserProfileFactory as StudentUserProfileFactory
 from courseware.models import StudentModule, XModuleUserStateSummaryField
@@ -121,8 +123,7 @@ class GlobalStaffFactory(UserFactory):
 
 
 class StudentModuleFactory(DjangoModelFactory):
-    class Meta(object):
-        model = StudentModule
+    FACTORY_FOR = StudentModule
 
     module_type = "problem"
     student = factory.SubFactory(UserFactory)
@@ -134,8 +135,7 @@ class StudentModuleFactory(DjangoModelFactory):
 
 
 class UserStateSummaryFactory(DjangoModelFactory):
-    class Meta(object):
-        model = XModuleUserStateSummaryField
+    FACTORY_FOR = XModuleUserStateSummaryField
 
     field_name = 'existing_field'
     value = json.dumps('old_value')
@@ -143,8 +143,7 @@ class UserStateSummaryFactory(DjangoModelFactory):
 
 
 class StudentPrefsFactory(DjangoModelFactory):
-    class Meta(object):
-        model = XModuleStudentPrefsField
+    FACTORY_FOR = XModuleStudentPrefsField
 
     field_name = 'existing_field'
     value = json.dumps('old_value')
@@ -153,8 +152,7 @@ class StudentPrefsFactory(DjangoModelFactory):
 
 
 class StudentInfoFactory(DjangoModelFactory):
-    class Meta(object):
-        model = XModuleStudentInfoField
+    FACTORY_FOR = XModuleStudentInfoField
 
     field_name = 'existing_field'
     value = json.dumps('old_value')

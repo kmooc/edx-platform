@@ -39,8 +39,7 @@ class StubXQueueHandler(StubHttpRequestHandler):
         if self._is_grade_request():
 
             # If configured, send the grader payload to other services.
-            # TODO TNL-3906
-            # self._register_submission(self.post_dict['xqueue_body'])
+            self._register_submission(self.post_dict['xqueue_body'])
 
             try:
                 xqueue_header = json.loads(self.post_dict['xqueue_header'])

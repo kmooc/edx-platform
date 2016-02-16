@@ -15,7 +15,6 @@ from django.db import transaction, DatabaseError
 from django.core.cache import cache
 
 from instructor_task.models import InstructorTask, PROGRESS, QUEUING
-from util.db import outer_atomic
 
 TASK_LOG = logging.getLogger('edx.celery.task')
 
@@ -317,10 +316,8 @@ def queue_subtasks_for_query(
         entry.id,
         total_num_subtasks,
         total_num_items,
-    )
-    # Make sure this is committed to database before handing off subtasks to celery.
-    with outer_atomic():
-        progress = initialize_subtask_info(entry, action_name, total_num_items, subtask_id_list)
+    )  # pylint: disable=no-member
+    progress = initialize_subtask_info(entry, action_name, total_num_items, subtask_id_list)
 
     # Construct a generator that will return the recipients to use for each subtask.
     # Pass in the desired fields to fetch for each recipient.
@@ -497,7 +494,7 @@ def update_subtask_status(entry_id, current_task_id, new_subtask_status, retry_c
         _release_subtask_lock(current_task_id)
 
 
-@transaction.atomic
+@transaction.commit_manually
 def _update_subtask_status(entry_id, current_task_id, new_subtask_status):
     """
     Update the status of the subtask in the parent InstructorTask object tracking its progress.
@@ -585,5 +582,9 @@ def _update_subtask_status(entry_id, current_task_id, new_subtask_status):
                       entry.task_output, current_task_id, entry_id)
     except Exception:
         TASK_LOG.exception("Unexpected error while updating InstructorTask.")
+        transaction.rollback()
         dog_stats_api.increment('instructor_task.subtask.update_exception')
         raise
+    else:
+        TASK_LOG.debug("about to commit....")
+        transaction.commit()

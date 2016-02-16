@@ -1,6 +1,4 @@
-define ["jquery", "common/js/components/utils/view_utils", "js/spec_helpers/edit_helpers",
-        "coffee/src/views/module_edit", "js/models/module_info", "xmodule"],
-  ($, ViewUtils, edit_helpers, ModuleEdit, ModuleModel) ->
+define ["jquery", "js/spec_helpers/edit_helpers", "coffee/src/views/module_edit", "js/models/module_info", "xmodule"], ($, edit_helpers, ModuleEdit, ModuleModel) ->
 
     describe "ModuleEdit", ->
       beforeEach ->
@@ -62,7 +60,7 @@ define ["jquery", "common/js/components/utils/view_utils", "js/spec_helpers/edit
             spyOn(@moduleEdit, 'loadDisplay')
             spyOn(@moduleEdit, 'delegateEvents')
             spyOn($.fn, 'append')
-            spyOn(ViewUtils, 'loadJavaScript').andReturn($.Deferred().resolve().promise());
+            spyOn($, 'getScript').andReturn($.Deferred().resolve().promise())
 
             window.MockXBlock = (runtime, element) ->
               return { }
@@ -152,7 +150,7 @@ define ["jquery", "common/js/components/utils/view_utils", "js/spec_helpers/edit
             expect($('head').append).toHaveBeenCalledWith("<script>inline-js</script>")
 
           it "loads js urls from fragments", ->
-            expect(ViewUtils.loadJavaScript).toHaveBeenCalledWith("js-url")
+            expect($.getScript).toHaveBeenCalledWith("js-url")
 
           it "loads head html", ->
             expect($('head').append).toHaveBeenCalledWith("head-html")

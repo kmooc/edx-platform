@@ -3,14 +3,12 @@ Set up lookup paths for mako templates.
 """
 
 import hashlib
-import contextlib
 import os
 import pkg_resources
 
 from django.conf import settings
 from mako.lookup import TemplateLookup
 
-from microsite_configuration import microsite
 from . import LOOKUP
 
 
@@ -22,9 +20,6 @@ class DynamicTemplateLookup(TemplateLookup):
     def __init__(self, *args, **kwargs):
         super(DynamicTemplateLookup, self).__init__(*args, **kwargs)
         self.__original_module_directory = self.template_args['module_directory']
-
-    def __repr__(self):
-        return "<{0.__class__.__name__} {0.directories}>".format(self)
 
     def add_directory(self, directory, prepend=False):
         """
@@ -46,18 +41,6 @@ class DynamicTemplateLookup(TemplateLookup):
         # Also clear the internal caches. Ick.
         self._collection.clear()
         self._uri_cache.clear()
-
-    def get_template(self, uri):
-        """
-        Overridden method which will hand-off the template lookup to the microsite subsystem
-        """
-        microsite_template = microsite.get_template(uri)
-
-        return (
-            microsite_template
-            if microsite_template
-            else super(DynamicTemplateLookup, self).get_template(uri)
-        )
 
 
 def clear_lookups(namespace):
@@ -95,26 +78,3 @@ def lookup_template(namespace, name):
     Look up a Mako template by namespace and name.
     """
     return LOOKUP[namespace].get_template(name)
-
-
-@contextlib.contextmanager
-def save_lookups():
-    """
-    A context manager to save and restore the Mako template lookup path.
-
-    Useful for testing.
-
-    """
-    # Make a copy of the list of directories for each namespace.
-    namespace_dirs = {namespace: list(look.directories) for namespace, look in LOOKUP.items()}
-
-    try:
-        yield
-    finally:
-        # Get rid of all the lookups.
-        LOOKUP.clear()
-
-        # Re-create the lookups from our saved list.
-        for namespace, directories in namespace_dirs.items():
-            for directory in directories:
-                add_lookup(namespace, directory)

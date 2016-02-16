@@ -19,6 +19,7 @@ from xmodule.services import SettingsService
 from xmodule.modulestore.django import modulestore, ModuleI18nService
 from xmodule.mixin import wrap_with_license
 from opaque_keys.edx.keys import UsageKey
+from opaque_keys.edx.locator import LibraryUsageLocator
 from xmodule.x_module import ModuleSystem
 from xblock.runtime import KvsFieldData
 from xblock.django.request import webob_to_django_response, django_to_webob_request
@@ -38,7 +39,7 @@ from .session_kv_store import SessionKeyValueStore
 from .helpers import render_from_lms
 
 from contentstore.views.access import get_user_role
-from xblock_config.models import StudioConfig
+from cms.djangoapps.xblock_config.models import StudioConfig
 
 __all__ = ['preview_handler']
 
@@ -118,20 +119,6 @@ class PreviewModuleSystem(ModuleSystem):  # pylint: disable=abstract-method
         Renders a placeholder XBlock.
         """
         return self.wrap_xblock(block, view_name, Fragment(), context)
-
-    def layout_asides(self, block, context, frag, view_name, aside_frag_fns):
-        position_for_asides = '<!-- footer for xblock_aside -->'
-        result = Fragment()
-        result.add_frag_resources(frag)
-
-        for aside, aside_fn in aside_frag_fns:
-            aside_frag = self.wrap_aside(block, aside, view_name, aside_fn(block, context), context)
-            aside.save()
-            result.add_frag_resources(aside_frag)
-            frag.content = frag.content.replace(position_for_asides, position_for_asides + aside_frag.content)
-
-        result.add_content(frag.content)
-        return result
 
 
 class StudioPermissionsService(object):

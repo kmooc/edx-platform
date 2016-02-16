@@ -25,9 +25,8 @@ class RestrictedCourseForm(forms.ModelForm):
     error message instead.
 
     """
-    class Meta(object):
+    class Meta:  # pylint: disable=missing-docstring
         model = RestrictedCourse
-        fields = '__all__'
 
     def clean_course_key(self):
         """Validate the course key.
@@ -56,12 +55,11 @@ class RestrictedCourseForm(forms.ModelForm):
         return course_key
 
 
-class IPFilterForm(forms.ModelForm):
+class IPFilterForm(forms.ModelForm):  # pylint: disable=incomplete-protocol
     """Form validating entry of IP addresses"""
 
-    class Meta(object):
+    class Meta:  # pylint: disable=missing-docstring
         model = IPFilter
-        fields = '__all__'
 
     def _is_valid_ip(self, address):
         """Whether or not address is a valid ipv4 address or ipv6 address"""

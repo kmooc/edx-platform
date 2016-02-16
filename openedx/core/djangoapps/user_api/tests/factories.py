@@ -10,8 +10,7 @@ from ..models import UserPreference, UserCourseTag, UserOrgTag
 # Factories are self documenting
 # pylint: disable=missing-docstring
 class UserPreferenceFactory(DjangoModelFactory):
-    class Meta(object):
-        model = UserPreference
+    FACTORY_FOR = UserPreference
 
     user = None
     key = None
@@ -19,8 +18,7 @@ class UserPreferenceFactory(DjangoModelFactory):
 
 
 class UserCourseTagFactory(DjangoModelFactory):
-    class Meta(object):
-        model = UserCourseTag
+    FACTORY_FOR = UserCourseTag
 
     user = SubFactory(UserFactory)
     course_id = SlashSeparatedCourseKey('org', 'course', 'run')
@@ -30,8 +28,7 @@ class UserCourseTagFactory(DjangoModelFactory):
 
 class UserOrgTagFactory(DjangoModelFactory):
     """ Simple factory class for generating UserOrgTags """
-    class Meta(object):
-        model = UserOrgTag
+    FACTORY_FOR = UserOrgTag
 
     user = SubFactory(UserFactory)
     org = 'org'

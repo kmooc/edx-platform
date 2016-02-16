@@ -90,30 +90,12 @@ dummy_locales:
 
 # Directories we don't search for strings.
 ignore_dirs:
+    - docs
+    - src
+    - i18n
+    - test_root
     - common/static/xmodule/modules
     - common/static/xmodule/descriptors
-    # Directories with no user-facing code.
-    - '*/migrations'
-    # Directories that are not our code.
-    - node_modules
-    # Directories containing files that can't have strings in them.
-    - conf
-    - docs
-    - '*/fonts'
-    - '*/img'
-    - '*/images'
-    - '*/sass'
-    - '*/css'
-    # Directories that only contain tests.
-    - common/test
-    - test_root
-    - '*/terrain'
-    - '*/spec'
-    - '*/tests'
-    - '*/features'
-    # Directories full of auto-generated JS
-    - lms/static/js/i18n
-    - cms/static/js/i18n
 
 
 # Third-party installed apps that we also extract strings from.  When adding a
@@ -148,14 +130,19 @@ segment:
 # How should the generate step merge files?
 generate_merge:
     django.po:
+        - kmooc.po
         - django-partial.po
         - django-studio.po
         - mako.po
         - mako-studio.po
         - messages.po
         - wiki.po
+        - underscore.po
+        - django.po
     djangojs.po:
+        - kmoocjs.po
         - djangojs-partial.po
         - djangojs-studio.po
         - underscore.po
         - underscore-studio.po
+        - djangojs.po

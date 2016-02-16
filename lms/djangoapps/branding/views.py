@@ -10,7 +10,7 @@ from django.http import HttpResponse, Http404
 from django.utils import translation
 from django.shortcuts import redirect
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.contrib.staticfiles.storage import staticfiles_storage
+from staticfiles.storage import staticfiles_storage
 
 from edxmako.shortcuts import render_to_response
 import student.views
@@ -51,15 +51,17 @@ def index(request):
     Redirects to main page -- info page if user authenticated, or marketing if not
     '''
 
-    if request.user.is_authenticated():
+    if settings.COURSEWARE_ENABLED and request.user.is_authenticated():
         # For microsites, only redirect to dashboard if user has
         # courses in his/her dashboard. Otherwise UX is a bit cryptic.
         # In this case, we want to have the user stay on a course catalog
         # page to make it easier to browse for courses (and register)
         if microsite.get_value(
-                'ALWAYS_REDIRECT_HOMEPAGE_TO_DASHBOARD_FOR_AUTHENTICATED_USER',
-                settings.FEATURES.get('ALWAYS_REDIRECT_HOMEPAGE_TO_DASHBOARD_FOR_AUTHENTICATED_USER', True)):
-            return redirect(reverse('dashboard'))
+            'ALWAYS_REDIRECT_HOMEPAGE_TO_DASHBOARD_FOR_AUTHENTICATED_USER',
+            settings.FEATURES.get('ALWAYS_REDIRECT_HOMEPAGE_TO_DASHBOARD_FOR_AUTHENTICATED_USER', True)
+        ):
+            # return redirect(reverse('dashboard'))
+            return student.views.index(request, user=request.user)
 
     if settings.FEATURES.get('AUTH_USE_CERTIFICATES'):
         from external_auth.views import ssl_login
@@ -115,6 +117,12 @@ def courses(request):
     return courseware.views.courses(request)
 
 
+@ensure_csrf_cookie
+@cache_if_anonymous()
+def schools(request):
+    return courseware.views.schools(request)
+
+
 def _footer_static_url(request, name):
     """Construct an absolute URL to a static asset. """
     return request.build_absolute_uri(staticfiles_storage.url(name))
@@ -148,7 +156,8 @@ def _render_footer_html(request, show_openedx_logo, include_dependencies):
 
     """
     bidi = 'rtl' if translation.get_language_bidi() else 'ltr'
-    css_name = settings.FOOTER_CSS['openedx'][bidi]
+    version = 'edx' if settings.FEATURES.get('IS_EDX_DOMAIN') else 'openedx'
+    css_name = settings.FOOTER_CSS[version][bidi]
 
     context = {
         'hide_openedx_link': not show_openedx_logo,
@@ -158,7 +167,11 @@ def _render_footer_html(request, show_openedx_logo, include_dependencies):
         'include_dependencies': include_dependencies,
     }
 
-    return render_to_response("footer.html", context)
+    return (
+        render_to_response("footer-edx-v3.html", context)
+        if settings.FEATURES.get("IS_EDX_DOMAIN", False)
+        else render_to_response("footer.html", context)
+    )
 
 
 @cache_control(must_revalidate=True, max_age=settings.FOOTER_BROWSER_CACHE_MAX_AGE)
@@ -227,7 +240,7 @@ def footer(request):
                 "title": "Powered by Open edX",
                 "image": "http://example.com/openedx.png"
             },
-            "logo_image": "http://example.com/static/images/logo.png",
+            "logo_image": "http://example.com/static/images/default-theme/logo.png",
             "copyright": "EdX, Open edX, and the edX and Open edX logos are \
                 registered trademarks or trademarks of edX Inc."
         }

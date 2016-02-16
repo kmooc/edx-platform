@@ -19,12 +19,14 @@
 
 .container {
   padding: 0;
+  min-width:1200px;
 
   > div {
     display: table;
     table-layout: fixed;
     width: 100%;
-    border: 1px solid $border-color-2;
+    border-radius: 3px;
+    border: 1px solid $outer-border-color;
     background: $container-bg;
     box-shadow: 0 1px 2px $shadow-l2;
   }
@@ -42,17 +44,13 @@ body {
   //background-image: $course-bg-image;
 }
 
-body, h1, h2, h3, h4, h5, h6, p, label {
+body, h1, h2, h3, h4, h5, h6, p, p a:link, p a:visited, a, label {
   @include text-align(left);
   font-family: $sans-serif;
 }
 
 table {
   table-layout: fixed;
-}
-
-.xblock table {
-  table-layout: auto
 }
 
 a {

@@ -1,4 +1,4 @@
-define(["js/views/baseview", "underscore", "jquery", "js/views/edit_chapter", "common/js/components/views/feedback_notification"],
+define(["js/views/baseview", "underscore", "jquery", "js/views/edit_chapter", "js/views/feedback_notification"],
         function(BaseView, _, $, EditChapterView, NotificationView) {
     var EditTextbook = BaseView.extend({
         initialize: function() {
@@ -40,7 +40,9 @@ define(["js/views/baseview", "underscore", "jquery", "js/views/edit_chapter", "c
         },
         setName: function(e) {
             if(e && e.preventDefault) { e.preventDefault(); }
-            this.model.set("name", this.$("#textbook-name-input").val(), {silent: true});
+            var value = this.$("#textbook-name-input").val();
+                value = value.replace(/<script/gi,"<noscript").replace(/\/script/gi,"\/noscript");
+            this.model.set("name", value, {silent: true});
         },
         setValues: function() {
             this.setName();
@@ -48,8 +50,10 @@ define(["js/views/baseview", "underscore", "jquery", "js/views/edit_chapter", "c
             _.each(this.$("li"), function(li, i) {
                 var chapter = that.model.get('chapters').at(i);
                 if(!chapter) { return; }
+                var value = $(".chapter-name", li).val();
+                value = value.replace(/<script/gi,"<noscript").replace(/\/script/gi,"\/noscript");
                 chapter.set({
-                    "name": $(".chapter-name", li).val(),
+                    "name": value,
                     "asset_path": $(".chapter-asset-path", li).val()
                 });
             });

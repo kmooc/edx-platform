@@ -1,56 +1,61 @@
-;(function (define) {
+var edx = edx || {};
+
+(function($, Backbone) {
     'use strict';
-    define(['jquery', 'backbone', 'jquery.url'],
-        function($, Backbone) {
 
-        return Backbone.Model.extend({
-            defaults: {
-                email: '',
-                name: '',
-                username: '',
-                password: '',
-                level_of_education: '',
-                gender: '',
-                year_of_birth: '',
-                mailing_address: '',
-                goals: ''
-            },
-            ajaxType: '',
-            urlRoot: '',
+    edx.student = edx.student || {};
+    edx.student.account = edx.student.account || {};
 
-            initialize: function( attributes, options ) {
-                this.ajaxType = options.method;
-                this.urlRoot = options.url;
-            },
+    edx.student.account.RegisterModel = Backbone.Model.extend({
 
-            sync: function(method, model) {
-                var headers = { 'X-CSRFToken': $.cookie('csrftoken') },
-                    data = {},
-                    courseId = $.url( '?course_id' );
+        defaults: {
+            email: '',
+            name: '',
+            username: '',
+            password: '',
+            level_of_education: '',
+            gender: '',
+            year_of_birth: '',
+            mailing_address: '',
+            goals: '',
+        },
 
-                // If there is a course ID in the query string param,
-                // send that to the server as well so it can be included
-                // in analytics events.
-                if ( courseId ) {
-                    data.course_id = decodeURIComponent(courseId);
-                }
+        ajaxType: '',
 
-                // Include all form fields and analytics info in the data sent to the server
-                $.extend( data, model.attributes);
+        urlRoot: '',
 
-                $.ajax({
-                    url: model.urlRoot,
-                    type: model.ajaxType,
-                    data: data,
-                    headers: headers,
-                    success: function() {
-                        model.trigger('sync');
-                    },
-                    error: function( error ) {
-                        model.trigger('error', error);
-                    }
-                });
+        initialize: function( attributes, options ) {
+            this.ajaxType = options.method;
+            this.urlRoot = options.url;
+        },
+
+        sync: function(method, model) {
+            var headers = { 'X-CSRFToken': $.cookie('csrftoken') },
+                data = {},
+                courseId = $.url( '?course_id' );
+
+            // If there is a course ID in the query string param,
+            // send that to the server as well so it can be included
+            // in analytics events.
+            if ( courseId ) {
+                data.course_id = decodeURIComponent(courseId);
             }
-        });
+
+            // Include all form fields and analytics info in the data sent to the server
+            $.extend( data, model.attributes);
+
+            $.ajax({
+                url: model.urlRoot,
+                type: model.ajaxType,
+                data: data,
+                headers: headers,
+                success: function() {
+                    model.trigger('sync');
+                },
+                error: function( error ) {
+                    model.trigger('error', error);
+                }
+            });
+        }
     });
-}).call(this, define || RequireJS.define);
+})(jQuery, Backbone);

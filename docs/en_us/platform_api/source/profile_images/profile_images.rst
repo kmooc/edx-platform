@@ -1,15 +1,14 @@
 .. Profile Images API:
 
 ##################################################
-Profile Images API Profile Images Resource
+Profile Images API
 ##################################################
 
-With the Profile Images API **Profile Images** resource, you can complete the
-following tasks.
+This page contains information on using the Profile Images API to complete
+the following actions.
 
-.. contents::
-   :local:
-   :depth: 1
+* `Upload a Profile Image`_
+* `Remove Profile Images`_
 
 .. _Upload a Profile Image:
 
@@ -19,7 +18,7 @@ Upload a Profile Image
 
 .. autoclass:: profile_images.views.ProfileImageUploadView
 
-**Example Response**
+**Example response**
 
 .. code-block:: json
 
@@ -27,15 +26,15 @@ Upload a Profile Image
     No Content
 
 
-.. _Remove a Profile Image:
+.. _Remove Profile Images:
 
 **************************************************
-Remove a Profile Image
+Remove Profile Images
 **************************************************
 
 .. autoclass:: profile_images.views.ProfileImageRemoveView
 
-**Example Response**
+**Example response**
 
 .. code-block:: json
 

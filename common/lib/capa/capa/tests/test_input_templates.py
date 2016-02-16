@@ -105,7 +105,8 @@ class TemplateTestCase(unittest.TestCase):
         If no elements are found, the assertion fails.
         """
         element_list = xml_root.xpath(xpath)
-        self.assertGreater(len(element_list), 0, "Could not find element at '%s'" % str(xpath))
+        self.assertTrue(len(element_list) > 0,
+                        "Could not find element at '%s'" % str(xpath))
 
         if exact:
             self.assertEqual(text, element_list[0].text)
@@ -485,7 +486,6 @@ class FormulaEquationInputTemplateTest(TemplateTestCase):
             'label': 'test',
             'previewer': 'file.js',
             'reported_status': 'REPORTED_STATUS',
-            'trailing_text': None,
         }
         super(FormulaEquationInputTemplateTest, self).setUp()
 

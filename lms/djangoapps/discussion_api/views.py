@@ -2,15 +2,14 @@
 Discussion API views
 """
 from django.core.exceptions import ValidationError
-from rest_framework.exceptions import UnsupportedMediaType
-from rest_framework.parsers import JSONParser
 
+from rest_framework.authentication import OAuth2Authentication, SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 
 from opaque_keys.edx.keys import CourseKey
-from xmodule.modulestore.django import modulestore
 
 from discussion_api.api import (
     create_comment,
@@ -18,21 +17,26 @@ from discussion_api.api import (
     delete_thread,
     delete_comment,
     get_comment_list,
-    get_response_comments,
     get_course,
     get_course_topics,
-    get_thread,
     get_thread_list,
     update_comment,
     update_thread,
 )
-from discussion_api.forms import CommentListGetForm, ThreadListGetForm, _PaginationForm
-from openedx.core.lib.api.parsers import MergePatchParser
-from openedx.core.lib.api.view_utils import DeveloperErrorViewMixin, view_auth_classes
+from discussion_api.forms import CommentListGetForm, ThreadListGetForm
+from openedx.core.lib.api.view_utils import DeveloperErrorViewMixin
 
 
-@view_auth_classes()
-class CourseView(DeveloperErrorViewMixin, APIView):
+class _ViewMixin(object):
+    """
+    Mixin to provide common characteristics and utility functions for Discussion
+    API views
+    """
+    authentication_classes = (OAuth2Authentication, SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+
+
+class CourseView(_ViewMixin, DeveloperErrorViewMixin, APIView):
     """
     **Use Cases**
 
@@ -64,8 +68,7 @@ class CourseView(DeveloperErrorViewMixin, APIView):
         return Response(get_course(request, course_key))
 
 
-@view_auth_classes()
-class CourseTopicsView(DeveloperErrorViewMixin, APIView):
+class CourseTopicsView(_ViewMixin, DeveloperErrorViewMixin, APIView):
     """
     **Use Cases**
 
@@ -94,24 +97,19 @@ class CourseTopicsView(DeveloperErrorViewMixin, APIView):
     def get(self, request, course_id):
         """Implements the GET method as described in the class docstring."""
         course_key = CourseKey.from_string(course_id)
-        with modulestore().bulk_operations(course_key):
-            response = get_course_topics(request, course_key)
-        return Response(response)
+        return Response(get_course_topics(request, course_key))
 
 
-@view_auth_classes()
-class ThreadViewSet(DeveloperErrorViewMixin, ViewSet):
+class ThreadViewSet(_ViewMixin, DeveloperErrorViewMixin, ViewSet):
     """
     **Use Cases**
 
-        Retrieve the list of threads for a course, retrieve thread details,
-        post a new thread, or modify or delete an existing thread.
+        Retrieve the list of threads for a course, post a new thread, or modify
+        or delete an existing thread.
 
     **Example Requests**:
 
         GET /api/discussion/v1/threads/?course_id=ExampleX/Demo/2015
-
-        GET /api/discussion/v1/threads/thread_id
 
         POST /api/discussion/v1/threads
         {
@@ -119,16 +117,15 @@ class ThreadViewSet(DeveloperErrorViewMixin, ViewSet):
           "topic_id": "quux",
           "type": "discussion",
           "title": "Title text",
-          "raw_body": "Body text"
+          "body": "Body text"
         }
 
         PATCH /api/discussion/v1/threads/thread_id
         {"raw_body": "Edited text"}
-        Content Type: "application/merge-patch+json"
 
         DELETE /api/discussion/v1/threads/thread_id
 
-    **GET Thread List Parameters**:
+    **GET Parameters**:
 
         * course_id (required): The course to retrieve threads for
 
@@ -144,19 +141,8 @@ class ThreadViewSet(DeveloperErrorViewMixin, ViewSet):
             (including the bodies of comments in the thread) matches the search
             string will be returned.
 
-        * order_by: Must be "last_activity_at", "comment_count", or
-            "vote_count". The key to sort the threads by. The default is
-            "last_activity_at".
-
-        * order_direction: Must be "asc" or "desc". The direction in which to
-            sort the threads by. The default is "desc".
-
         * following: If true, retrieve only threads the requesting user is
             following
-
-        * view: "unread" for threads the requesting user has not read, or
-            "unanswered" for question threads with no marked answer. Only one
-            can be selected.
 
         The topic_id, text_search, and following parameters are mutually
         exclusive (i.e. only one may be specified in a request)
@@ -178,19 +164,10 @@ class ThreadViewSet(DeveloperErrorViewMixin, ViewSet):
 
     **PATCH Parameters**:
 
-        * abuse_flagged (optional): A boolean to mark thread as abusive
-
-        * voted (optional): A boolean to vote for thread
-
-        * read (optional): A boolean to mark thread as read
-
-        * topic_id, type, title, and raw_body are accepted with the same meaning
+        topic_id, type, title, and raw_body are accepted with the same meaning
         as in a POST request
 
-        If "application/merge-patch+json" is not the specified content type,
-        a 415 error is returned.
-
-    **GET Thread List Response Values**:
+    **GET Response Values**:
 
         * results: The list of threads; each item in the list has the same
             fields as the POST/PATCH response below
@@ -202,10 +179,6 @@ class ThreadViewSet(DeveloperErrorViewMixin, ViewSet):
         * text_search_rewrite: The search string to which the text_search
             parameter was rewritten in order to match threads (e.g. for spelling
             correction)
-
-    **GET Thread Details Response Values**:
-
-        Same response fields as the POST/PATCH response below
 
     **POST/PATCH response values**:
 
@@ -239,19 +212,12 @@ class ThreadViewSet(DeveloperErrorViewMixin, ViewSet):
         * editable_fields: The fields that the requesting user is allowed to
             modify with a PATCH request
 
-        * read: Boolean indicating whether the user has read this thread
-
-        * has_endorsed: Boolean indicating whether this thread has been answered
-
-        * response_count: The number of direct responses for a thread
-
     **DELETE response values:
 
         No content is returned for a DELETE request
 
     """
     lookup_field = "thread_id"
-    parser_classes = (JSONParser, MergePatchParser,)
 
     def list(self, request):
         """
@@ -261,40 +227,31 @@ class ThreadViewSet(DeveloperErrorViewMixin, ViewSet):
         form = ThreadListGetForm(request.GET)
         if not form.is_valid():
             raise ValidationError(form.errors)
-        return get_thread_list(
-            request,
-            form.cleaned_data["course_id"],
-            form.cleaned_data["page"],
-            form.cleaned_data["page_size"],
-            form.cleaned_data["topic_id"],
-            form.cleaned_data["text_search"],
-            form.cleaned_data["following"],
-            form.cleaned_data["view"],
-            form.cleaned_data["order_by"],
-            form.cleaned_data["order_direction"],
+        return Response(
+            get_thread_list(
+                request,
+                form.cleaned_data["course_id"],
+                form.cleaned_data["page"],
+                form.cleaned_data["page_size"],
+                form.cleaned_data["topic_id"],
+                form.cleaned_data["text_search"],
+                form.cleaned_data["following"],
+            )
         )
-
-    def retrieve(self, request, thread_id=None):
-        """
-        Implements the GET method for thread ID
-        """
-        return Response(get_thread(request, thread_id))
 
     def create(self, request):
         """
         Implements the POST method for the list endpoint as described in the
         class docstring.
         """
-        return Response(create_thread(request, request.data))
+        return Response(create_thread(request, request.DATA))
 
     def partial_update(self, request, thread_id):
         """
         Implements the PATCH method for the instance endpoint as described in
         the class docstring.
         """
-        if request.content_type != MergePatchParser.media_type:
-            raise UnsupportedMediaType(request.content_type)
-        return Response(update_thread(request, thread_id, request.data))
+        return Response(update_thread(request, thread_id, request.DATA))
 
     def destroy(self, request, thread_id):
         """
@@ -305,20 +262,16 @@ class ThreadViewSet(DeveloperErrorViewMixin, ViewSet):
         return Response(status=204)
 
 
-@view_auth_classes()
-class CommentViewSet(DeveloperErrorViewMixin, ViewSet):
+class CommentViewSet(_ViewMixin, DeveloperErrorViewMixin, ViewSet):
     """
     **Use Cases**
 
-        Retrieve the list of comments in a thread, retrieve the list of
-        child comments for a response comment, create a comment, or modify
+        Retrieve the list of comments in a thread, create a comment, or modify
         or delete an existing comment.
 
     **Example Requests**:
 
         GET /api/discussion/v1/comments/?thread_id=0123456789abcdef01234567
-
-        GET /api/discussion/v1/comments/2123456789abcdef01234555
 
         POST /api/discussion/v1/comments/
         {
@@ -328,11 +281,10 @@ class CommentViewSet(DeveloperErrorViewMixin, ViewSet):
 
         PATCH /api/discussion/v1/comments/comment_id
         {"raw_body": "Edited text"}
-        Content Type: "application/merge-patch+json"
 
         DELETE /api/discussion/v1/comments/comment_id
 
-    **GET Comment List Parameters**:
+    **GET Parameters**:
 
         * thread_id (required): The thread to retrieve comments for
 
@@ -343,15 +295,6 @@ class CommentViewSet(DeveloperErrorViewMixin, ViewSet):
         * page: The (1-indexed) page to retrieve (default is 1)
 
         * page_size: The number of items per page (default is 10, max is 100)
-
-    **GET Child Comment List Parameters**:
-
-        * comment_id (required): The comment to retrieve child comments for
-
-        * page: The (1-indexed) page to retrieve (default is 1)
-
-        * page_size: The number of items per page (default is 10, max is 100)
-
 
     **POST Parameters**:
 
@@ -365,9 +308,6 @@ class CommentViewSet(DeveloperErrorViewMixin, ViewSet):
     **PATCH Parameters**:
 
         raw_body is accepted with the same meaning as in a POST request
-
-        If "application/merge-patch+json" is not the specified content type,
-        a 415 error is returned.
 
     **GET Response Values**:
 
@@ -390,8 +330,8 @@ class CommentViewSet(DeveloperErrorViewMixin, ViewSet):
           comment is anonymous
 
         * author_label: A label indicating whether the author has a special
-          role in the course, either "Staff" for moderators and
-          administrators or "Community TA" for community TAs
+          role in the course, either "staff" for moderators and
+          administrators or "community_ta" for community TAs
 
         * created_at: The ISO 8601 timestamp for the creation of the comment
 
@@ -431,7 +371,6 @@ class CommentViewSet(DeveloperErrorViewMixin, ViewSet):
 
     """
     lookup_field = "comment_id"
-    parser_classes = (JSONParser, MergePatchParser,)
 
     def list(self, request):
         """
@@ -441,26 +380,14 @@ class CommentViewSet(DeveloperErrorViewMixin, ViewSet):
         form = CommentListGetForm(request.GET)
         if not form.is_valid():
             raise ValidationError(form.errors)
-        return get_comment_list(
-            request,
-            form.cleaned_data["thread_id"],
-            form.cleaned_data["endorsed"],
-            form.cleaned_data["page"],
-            form.cleaned_data["page_size"]
-        )
-
-    def retrieve(self, request, comment_id=None):
-        """
-        Implements the GET method for comments against response ID
-        """
-        form = _PaginationForm(request.GET)
-        if not form.is_valid():
-            raise ValidationError(form.errors)
-        return get_response_comments(
-            request,
-            comment_id,
-            form.cleaned_data["page"],
-            form.cleaned_data["page_size"]
+        return Response(
+            get_comment_list(
+                request,
+                form.cleaned_data["thread_id"],
+                form.cleaned_data["endorsed"],
+                form.cleaned_data["page"],
+                form.cleaned_data["page_size"]
+            )
         )
 
     def create(self, request):
@@ -468,7 +395,7 @@ class CommentViewSet(DeveloperErrorViewMixin, ViewSet):
         Implements the POST method for the list endpoint as described in the
         class docstring.
         """
-        return Response(create_comment(request, request.data))
+        return Response(create_comment(request, request.DATA))
 
     def destroy(self, request, comment_id):
         """
@@ -483,6 +410,4 @@ class CommentViewSet(DeveloperErrorViewMixin, ViewSet):
         Implements the PATCH method for the instance endpoint as described in
         the class docstring.
         """
-        if request.content_type != MergePatchParser.media_type:
-            raise UnsupportedMediaType(request.content_type)
-        return Response(update_comment(request, comment_id, request.data))
+        return Response(update_comment(request, comment_id, request.DATA))

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-# TODO: Is this file still used? If so it should be refactored and tests added.
-# pylint: disable=line-too-long, invalid-name
+
 """
 Embeds web videos using URLs.  For instance, if a URL to an youtube video is
 found in the text submitted to markdown and it isn't enclosed in parenthesis
@@ -133,8 +132,8 @@ try:
     # Markdown 2.1.0 changed from 2.0.3. We try importing the new version first,
     # but import the 2.0.3 version if it fails
     from markdown.util import etree
-except ImportError:
-    from markdown import etree  # pylint: disable=no-name-in-module
+except:  # pylint: disable=bare-except
+    from markdown import etree
 
 
 version = "0.1.6"
@@ -165,8 +164,7 @@ class VideoExtension(markdown.Extension):
         for key, value in configs:
             self.setConfig(key, value)
 
-    def add_inline(self, md, name, klass, re):  # pylint: disable=invalid-name
-        """Adds the inline link"""
+    def add_inline(self, md, name, klass, re):
         pattern = klass(re)
         pattern.md = md
         pattern.ext = self
@@ -194,7 +192,6 @@ class VideoExtension(markdown.Extension):
 class Bliptv(markdown.inlinepatterns.Pattern):
     def handleMatch(self, m):
         url = 'http://blip.tv/scripts/flash/showplayer.swf?file=http://blip.tv/file/get/%s' % m.group('bliptvfile')
-        # pylint: disable=no-member
         width = self.ext.config['bliptv_width'][0]
         height = self.ext.config['bliptv_height'][0]
         return flash_object(url, width, height)
@@ -203,7 +200,6 @@ class Bliptv(markdown.inlinepatterns.Pattern):
 class Dailymotion(markdown.inlinepatterns.Pattern):
     def handleMatch(self, m):
         url = 'http://www.dailymotion.com/swf/%s' % m.group('dailymotionid').split('/')[-1]
-        # pylint: disable=no-member
         width = self.ext.config['dailymotion_width'][0]
         height = self.ext.config['dailymotion_height'][0]
         return flash_object(url, width, height)
@@ -213,7 +209,6 @@ class Gametrailers(markdown.inlinepatterns.Pattern):
     def handleMatch(self, m):
         url = 'http://www.gametrailers.com/remote_wrap.php?mid=%s' % \
             m.group('gametrailersid').split('/')[-1]
-        # pylint: disable=no-member
         width = self.ext.config['gametrailers_width'][0]
         height = self.ext.config['gametrailers_height'][0]
         return flash_object(url, width, height)
@@ -222,7 +217,6 @@ class Gametrailers(markdown.inlinepatterns.Pattern):
 class Metacafe(markdown.inlinepatterns.Pattern):
     def handleMatch(self, m):
         url = 'http://www.metacafe.com/fplayer/%s.swf' % m.group('metacafeid')
-        # pylint: disable=no-member
         width = self.ext.config['metacafe_width'][0]
         height = self.ext.config['metacafe_height'][0]
         return flash_object(url, width, height)
@@ -231,7 +225,6 @@ class Metacafe(markdown.inlinepatterns.Pattern):
 class Veoh(markdown.inlinepatterns.Pattern):
     def handleMatch(self, m):
         url = 'http://www.veoh.com/videodetails2.swf?permalinkId=%s' % m.group('veohid')
-        # pylint: disable=no-member
         width = self.ext.config['veoh_width'][0]
         height = self.ext.config['veoh_height'][0]
         return flash_object(url, width, height)
@@ -240,7 +233,6 @@ class Veoh(markdown.inlinepatterns.Pattern):
 class Vimeo(markdown.inlinepatterns.Pattern):
     def handleMatch(self, m):
         url = 'http://vimeo.com/moogaloop.swf?clip_id=%s&amp;server=vimeo.com' % m.group('vimeoid')
-        # pylint: disable=no-member
         width = self.ext.config['vimeo_width'][0]
         height = self.ext.config['vimeo_height'][0]
         return flash_object(url, width, height)
@@ -249,7 +241,6 @@ class Vimeo(markdown.inlinepatterns.Pattern):
 class Yahoo(markdown.inlinepatterns.Pattern):
     def handleMatch(self, m):
         url = "http://d.yimg.com/static.video.yahoo.com/yep/YV_YEP.swf?ver=2.2.40"
-        # pylint: disable=no-member
         width = self.ext.config['yahoo_width'][0]
         height = self.ext.config['yahoo_height'][0]
         obj = flash_object(url, width, height)
@@ -264,7 +255,6 @@ class Yahoo(markdown.inlinepatterns.Pattern):
 class Youtube(markdown.inlinepatterns.Pattern):
     def handleMatch(self, m):
         url = 'http://www.youtube.com/v/%s' % m.group('youtubeargs')
-        # pylint: disable=no-member
         width = self.ext.config['youtube_width'][0]
         height = self.ext.config['youtube_height'][0]
         return flash_object(url, width, height)

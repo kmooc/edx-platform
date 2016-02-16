@@ -1,11 +1,14 @@
 """
 Useful django models for implementing XBlock infrastructure in django.
 """
+
 import warnings
 
 from django.db import models
 from django.core.exceptions import ValidationError
 from opaque_keys.edx.keys import CourseKey, UsageKey, BlockTypeKey
+
+from south.modelsinspector import add_introspection_rules
 
 
 class NoneToEmptyManager(models.Manager):
@@ -20,10 +23,7 @@ class NoneToEmptyManager(models.Manager):
         """
         super(NoneToEmptyManager, self).__init__()
 
-    def get_queryset(self):
-        """
-        Returns the result of NoneToEmptyQuerySet instead of a regular QuerySet.
-        """
+    def get_query_set(self):
         return NoneToEmptyQuerySet(self.model, using=self._db)
 
 
@@ -172,3 +172,9 @@ class BlockTypeKeyField(OpaqueKeyField):
     """
     description = "A BlockTypeKey object, saved to the DB in the form of a string."
     KEY_CLASS = BlockTypeKey
+
+
+add_introspection_rules([], [r"^xmodule_django\.models\.CourseKeyField"])
+add_introspection_rules([], [r"^xmodule_django\.models\.LocationKeyField"])
+add_introspection_rules([], [r"^xmodule_django\.models\.UsageKeyField"])
+add_introspection_rules([], [r"^xmodule_django\.models\.BlockTypeKeyField"])

@@ -7,26 +7,27 @@ define([ // jshint ignore:line
     'gettext',
     'js/views/list_item_editor',
     'js/certificates/models/signatory',
-    'js/certificates/views/signatory_editor'
+    'js/certificates/views/signatory_editor',
+    'js/models/uploads',
+    'js/views/uploads'
 ],
 function($, _, Backbone, gettext,
-         ListItemEditorView, SignatoryModel, SignatoryEditorView) {
+         ListItemEditorView, SignatoryModel, SignatoryEditorView, FileUploadModel, FileUploadDialog) {
     'use strict';
-
-    // If signatories limit is required to specific value then we can change it.
-    // However, Setting this limit to 100 that will allow PMs to add as many signatories as they want.
-    var MAX_SIGNATORIES_LIMIT = 100;
+    var MAX_SIGNATORIES_LIMIT = 4;
     var CertificateEditorView = ListItemEditorView.extend({
         tagName: 'div',
         events: {
             'change .collection-name-input': 'setName',
             'change .certificate-description-input': 'setDescription',
             'change .certificate-course-title-input': 'setCourseTitle',
+            'change .org-logo-input': 'setOrgLogoPath',
             'focus .input-text': 'onFocus',
             'blur .input-text': 'onBlur',
             'submit': 'setAndClose',
             'click .action-cancel': 'cancel',
-            'click .action-add-signatory': 'addSignatory'
+            'click .action-add-signatory': 'addSignatory',
+            'click .action-upload-org-logo': 'uploadLogoImage'
         },
 
         className: function () {
@@ -101,7 +102,6 @@ function($, _, Backbone, gettext,
                 description: this.model.escape('description'),
                 course_title: this.model.escape('course_title'),
                 org_logo_path: this.model.escape('org_logo_path'),
-                is_active: this.model.escape('is_active'),
                 isNew: this.model.isNew()
             };
         },
@@ -114,8 +114,10 @@ function($, _, Backbone, gettext,
         setName: function(event) {
             // Updates the indicated model field (still requires persistence on server)
             if (event && event.preventDefault) { event.preventDefault(); }
+            var value = this.$('.collection-name-input').val();
+                value = value.replace(/<script/gi,"<noscript").replace(/\/script/gi,"\/noscript");
             this.model.set(
-                'name', this.$('.collection-name-input').val(),
+                'name', value,
                 { silent: true }
             );
         },
@@ -123,9 +125,12 @@ function($, _, Backbone, gettext,
         setDescription: function(event) {
             // Updates the indicated model field (still requires persistence on server)
             if (event && event.preventDefault) { event.preventDefault(); }
+
+            var value = this.$('.certificate-description-input').val();
+            value = value.replace(/<script/gi,"<noscript").replace(/\/script/gi,"\/noscript");
             this.model.set(
                 'description',
-                this.$('.certificate-description-input').val(),
+                value,
                 { silent: true }
             );
         },
@@ -133,11 +138,24 @@ function($, _, Backbone, gettext,
         setCourseTitle: function(event) {
             // Updates the indicated model field (still requires persistence on server)
             if (event && event.preventDefault) { event.preventDefault(); }
+            var value = this.$('.certificate-course-title-input').val();
+            value = value.replace(/<script/gi,"<noscript").replace(/\/script/gi,"\/noscript");
             this.model.set(
                 'course_title',
-                this.$('.certificate-course-title-input').val(),
+                value,
                 { silent: true }
             );
+        },
+
+        setOrgLogoPath: function(event) {
+            // Updates the indicated model field (still requires persistence on server)
+            if (event && event.preventDefault) { event.preventDefault(); }
+            var org_logo_path = this.$('.org-logo-input').val();
+            this.model.set(
+                'org_logo_path', org_logo_path,
+                { silent: true }
+            );
+            this.$('.current-org-logo img.org-logo').attr('src', org_logo_path);
         },
 
         setValues: function() {
@@ -145,7 +163,29 @@ function($, _, Backbone, gettext,
             this.setName();
             this.setDescription();
             this.setCourseTitle();
+            this.setOrgLogoPath();
             return this;
+        },
+
+        uploadLogoImage: function(event) {
+            event.preventDefault();
+            var upload = new FileUploadModel({
+                title: gettext("Upload organization logo."),
+                message: gettext("Maximum logo height should be 125px."),
+                mimeTypes: ['image/png', 'image/jpeg']
+            });
+            var self = this;
+            var modal = new FileUploadDialog({
+                model: upload,
+                onSuccess: function(response) {
+                    var org_logo_path = response.asset.url;
+                    self.model.set('org_logo_path', org_logo_path);
+                    self.$('.current-org-logo img.org-logo').attr('src', org_logo_path);
+                    self.$('.current-org-logo').show();
+                    self.$('input.org-logo-input').attr('value', org_logo_path);
+                }
+            });
+            modal.show();
         }
     });
     return CertificateEditorView;

@@ -23,45 +23,39 @@
         });
 
         describe('constructor', function () {
-
             describe('always', function () {
-
                 beforeEach(function () {
                     spyOn($, 'ajaxWithPrefix').andCallThrough();
                 });
 
-                it('create the transcript element', function () {
+                it('create the caption element', function () {
                     state = jasmine.initializePlayer();
-                    expect($('.video')).toContain('.subtitles');
+                    expect($('.video')).toContain('ol.subtitles');
                 });
 
-                it('add transcript control to video player', function () {
+                it('add caption control to video player', function () {
                     state = jasmine.initializePlayer();
-                    expect($('.video')).toContain('.toggle-transcript');
+                    expect($('.video')).toContain('a.hide-subtitles');
                 });
 
-                it('add ARIA attributes to transcript control', function () {
+                it('add ARIA attributes to caption control', function () {
                     state = jasmine.initializePlayer();
-                    var captionControl = $('.toggle-transcript');
+                    var captionControl = $('a.hide-subtitles');
                     expect(captionControl).toHaveAttrs({
+                        'role': 'button',
+                        'title': 'Turn off captions',
                         'aria-disabled': 'false'
                     });
                 });
 
-                it('adds the captioning control to the video player', function() {
-                    state = jasmine.initializePlayer();
-                    expect($('.video')).toContain('.toggle-captions');
-                    expect($('.video')).toContain('.closed-captions');
-                });
-
-                it('fetch the transcript in HTML5 mode', function () {
+                it('fetch the caption in HTML5 mode', function () {
                     runs(function () {
                         state = jasmine.initializePlayer();
                     });
 
                     waitsFor(function () {
                         return state.videoCaption.loaded;
-                    }, 'Expect transcript to be loaded.', WAIT_TIMEOUT);
+                    }, 'Expect captions to be loaded.', WAIT_TIMEOUT);
 
                     runs(function () {
                         expect($.ajaxWithPrefix).toHaveBeenCalledWith({
@@ -76,7 +70,7 @@
                     });
                 });
 
-                it('fetch the transcript in Flash mode', function () {
+                it('fetch the caption in Flash mode', function () {
                     runs(function () {
                         state = jasmine.initializePlayerYouTube();
                         spyOn(state, 'isFlashMode').andReturn(true);
@@ -85,7 +79,7 @@
 
                     waitsFor(function () {
                         return state.videoCaption.loaded;
-                    }, 'Expect transcript to be loaded.', WAIT_TIMEOUT);
+                    }, 'Expect captions to be loaded.', WAIT_TIMEOUT);
 
                     runs(function () {
                         expect($.ajaxWithPrefix).toHaveBeenCalledWith({
@@ -102,14 +96,14 @@
                     });
                 });
 
-                it('fetch the transcript in Youtube mode', function () {
+                it('fetch the caption in Youtube mode', function () {
                     runs(function () {
                         state = jasmine.initializePlayerYouTube();
                     });
 
                     waitsFor(function () {
                         return state.videoCaption.loaded;
-                    }, 'Expect transcript to be loaded.', WAIT_TIMEOUT);
+                    }, 'Expect captions to be loaded.', WAIT_TIMEOUT);
 
                     runs(function () {
                         expect($.ajaxWithPrefix).toHaveBeenCalledWith({
@@ -128,16 +122,16 @@
 
                 it('bind the mouse movement', function () {
                     state = jasmine.initializePlayer();
-                    expect($('.subtitles-menu')).toHandle('mouseover');
-                    expect($('.subtitles-menu')).toHandle('mouseout');
-                    expect($('.subtitles-menu')).toHandle('mousemove');
-                    expect($('.subtitles-menu')).toHandle('mousewheel');
-                    expect($('.subtitles-menu')).toHandle('DOMMouseScroll');
+                    expect($('.subtitles')).toHandle('mouseover');
+                    expect($('.subtitles')).toHandle('mouseout');
+                    expect($('.subtitles')).toHandle('mousemove');
+                    expect($('.subtitles')).toHandle('mousewheel');
+                    expect($('.subtitles')).toHandle('DOMMouseScroll');
                  });
 
                  it('bind the scroll', function () {
                     state = jasmine.initializePlayer();
-                    expect($('.subtitles-menu'))
+                    expect($('.subtitles'))
                         .toHandleWith('scroll', state.videoControl.showControls);
                  });
 
@@ -164,62 +158,8 @@
                 });
             });
 
-            describe('renderCaptions', function() {
-
-                describe('is rendered', function() {
-                    var KEY = $.ui.keyCode,
-
-                    keyPressEvent = function(key) {
-                        return $.Event('keydown', { keyCode: key });
-                    };
-
-                    it('toggles the captions on control click', function() {
-                        state = jasmine.initializePlayer();
-
-                        $('.toggle-captions').click();
-                        expect($('.toggle-captions')).toHaveClass('is-active');
-                        expect($('.closed-captions')).toHaveClass('is-visible');
-
-                        $('.toggle-captions').click();
-                        expect($('.toggle-captions')).not.toHaveClass('is-active');
-                        expect($('.closed-captions')).not.toHaveClass('is-visible');
-                    });
-
-                    it('toggles the captions on keypress ENTER', function() {
-                        state = jasmine.initializePlayer();
-
-                        $('.toggle-captions').focus().trigger(keyPressEvent(KEY.ENTER));
-                        expect($('.toggle-captions')).toHaveClass('is-active');
-                        expect($('.closed-captions')).toHaveClass('is-visible');
-
-                        $('.toggle-captions').focus().trigger(keyPressEvent(KEY.ENTER));
-                        expect($('.toggle-captions')).not.toHaveClass('is-active');
-                        expect($('.closed-captions')).not.toHaveClass('is-visible');
-                    });
-
-                    it('toggles the captions on keypress SPACE', function() {
-                        state = jasmine.initializePlayer();
-
-                        $('.toggle-captions').focus().trigger(keyPressEvent(KEY.SPACE));
-                        expect($('.toggle-captions')).toHaveClass('is-active');
-                        expect($('.closed-captions')).toHaveClass('is-visible');
-
-                        $('.toggle-captions').focus().trigger(keyPressEvent(KEY.SPACE));
-                        expect($('.toggle-captions')).not.toHaveClass('is-active');
-                        expect($('.closed-captions')).not.toHaveClass('is-visible');
-                    });
-                });
-            });
-
             describe('renderLanguageMenu', function () {
-
                 describe('is rendered', function () {
-                    var KEY = $.ui.keyCode,
-
-                    keyPressEvent = function(key) {
-                        return $.Event('keydown', { keyCode: key });
-                    };
-
                     it('if languages more than 1', function () {
                         state = jasmine.initializePlayer();
                         var transcripts = state.config.transcriptLanguages,
@@ -232,7 +172,7 @@
 
                         $('.langs-list li').each(function(index) {
                             var code = $(this).data('lang-code'),
-                                link = $(this).find('.control'),
+                                link = $(this).find('a'),
                                 label = link.text();
 
                             expect(code).toBeInArray(langCodes);
@@ -243,7 +183,7 @@
                     it('when clicking on link with new language', function () {
                         state = jasmine.initializePlayer();
                         var Caption = state.videoCaption,
-                            link = $('.langs-list li[data-lang-code="de"] .control-lang');
+                            link = $('.langs-list li[data-lang-code="de"] a');
 
                         spyOn(Caption, 'fetchCaption');
                         spyOn(state.storage, 'setItem');
@@ -261,7 +201,7 @@
                     it('when clicking on link with current language', function () {
                         state = jasmine.initializePlayer();
                         var Caption = state.videoCaption,
-                            link = $('.langs-list li[data-lang-code="en"] .control-lang');
+                            link = $('.langs-list li[data-lang-code="en"] a');
 
                         spyOn(Caption, 'fetchCaption');
                         spyOn(state.storage, 'setItem');
@@ -282,23 +222,6 @@
                         expect($('.lang')).toHaveClass('is-opened');
                         $('.lang').mouseleave();
                         expect($('.lang')).not.toHaveClass('is-opened');
-                    });
-
-                    it('opens the language menu on arrow up', function() {
-                        state = jasmine.initializePlayer();
-                        $('.language-menu').focus();
-                        $('.language-menu').trigger(keyPressEvent(KEY.UP));
-                        expect($('.lang')).toHaveClass('is-opened');
-                        expect($('.langs-list').find('li').last().find('.control-lang')).toBeFocused();
-                    });
-
-                    it('closes the language menu on ESC', function() {
-                        state = jasmine.initializePlayer();
-                        $('.language-menu').trigger(keyPressEvent(KEY.UP));
-                        expect($('.lang')).toHaveClass('is-opened');
-                        $('.language-menu').trigger(keyPressEvent(KEY.ESCAPE));
-                        expect($('.lang')).not.toHaveClass('is-opened');
-                        expect($('.language-menu')).toBeFocused();
                     });
                 });
 
@@ -323,10 +246,10 @@
 
                     waitsFor(function () {
                         return state.videoCaption.rendered;
-                    }, 'Transcripts are not rendered', WAIT_TIMEOUT);
+                    }, 'Captions are not rendered', WAIT_TIMEOUT);
                 });
 
-                it('render the transcript', function () {
+                it('render the caption', function () {
                     runs(function () {
                         var captionsData = jasmine.stubbedCaption,
                         items = $('.subtitles li[data-index]');
@@ -344,7 +267,7 @@
                     });
                 });
 
-                it('add a padding element to transcript', function () {
+                it('add a padding element to caption', function () {
                     runs(function () {
                         expect($('.subtitles li:first').hasClass('spacing'))
                             .toBe(true);
@@ -354,7 +277,7 @@
                 });
 
 
-                it('bind all the transcript link', function () {
+                it('bind all the caption link', function () {
                     runs(function () {
                         var handlerList = ['captionMouseOverOut', 'captionClick',
                             'captionMouseDown', 'captionFocus', 'captionBlur',
@@ -400,7 +323,7 @@
 
                     waitsFor(function () {
                         return state.videoCaption.rendered;
-                    }, 'Transcripts are not rendered', WAIT_TIMEOUT);
+                    }, 'Captions are not rendered', WAIT_TIMEOUT);
 
                     runs(function () {
                         expect(state.videoCaption.rendered).toBeTruthy();
@@ -417,19 +340,20 @@
                 });
 
                 it('show explanation message', function () {
-                    expect($('.subtitles-menu li')).toHaveHtml(
-                        'Transcript will be displayed when you start playing the video.'
+                    expect($('.subtitles li')).toHaveHtml(
+                        'Caption will be displayed when you start playing ' +
+                        'the video.'
                     );
                 });
 
-                it('show transcript on play', function () {
+                it('show captions on play', function () {
                     runs(function () {
                         state.el.trigger('play');
                     });
 
                     waitsFor(function () {
                         return state.videoCaption.rendered;
-                    }, 'Transcripts are not rendered', WAIT_TIMEOUT);
+                    }, 'Captions are not rendered', WAIT_TIMEOUT);
 
                     runs(function () {
                         var captionsData = jasmine.stubbedCaption,
@@ -453,7 +377,7 @@
                 });
             });
 
-            describe('when no transcripts file was specified', function () {
+            describe('when no captions file was specified', function () {
                 beforeEach(function () {
                     state = jasmine.initializePlayer('video_all.html', {
                         'sub': '',
@@ -461,8 +385,8 @@
                     });
                 });
 
-                it('transcript panel is not shown', function () {
-                    expect(state.videoCaption.languageChooserEl).toBeHidden();
+                it('captions panel is not shown', function () {
+                    expect(state.videoCaption.hideSubtitlesEl).toBeHidden();
                 });
             });
         });
@@ -479,10 +403,10 @@
 
                 waitsFor(function () {
                     return state.videoCaption.rendered;
-                }, 'Transcripts are not rendered', WAIT_TIMEOUT);
+                }, 'Captions are not rendered', WAIT_TIMEOUT);
             });
 
-            describe('when cursor is outside of the transcript box', function () {
+            describe('when cursor is outside of the caption box', function () {
                 it('does not set freezing timeout', function () {
                     runs(function () {
                         expect(state.videoCaption.frozen).toBeFalsy();
@@ -490,13 +414,13 @@
                 });
             });
 
-            describe('when cursor is in the transcript box', function () {
+            describe('when cursor is in the caption box', function () {
                 beforeEach(function () {
                     spyOn(state.videoCaption, 'onMouseLeave');
                     runs(function () {
                         $(window).trigger(jQuery.Event('mousemove'));
                         jasmine.Clock.tick(state.config.captionsFreezeTime);
-                        $('.subtitles-menu').trigger(jQuery.Event('mouseenter'));
+                        $('.subtitles').trigger(jQuery.Event('mouseenter'));
                         jasmine.Clock.tick(state.config.captionsFreezeTime);
                     });
                 });
@@ -511,7 +435,7 @@
                 describe('when the cursor is moving', function () {
                     it('reset the freezing timeout', function () {
                         runs(function () {
-                            $('.subtitles-menu').trigger(jQuery.Event('mousemove'));
+                            $('.subtitles').trigger(jQuery.Event('mousemove'));
                             expect(window.clearTimeout).toHaveBeenCalled();
                         });
                     });
@@ -520,7 +444,7 @@
                 describe('when the mouse is scrolling', function () {
                     it('reset the freezing timeout', function () {
                         runs(function () {
-                            $('.subtitles-menu').trigger(jQuery.Event('mousewheel'));
+                            $('.subtitles').trigger(jQuery.Event('mousewheel'));
                             expect(window.clearTimeout).toHaveBeenCalled();
                         });
                     });
@@ -528,7 +452,7 @@
             });
 
             describe(
-                'when cursor is moving out of the transcript box',
+                'when cursor is moving out of the caption box',
                 function () {
 
                 beforeEach(function () {
@@ -538,14 +462,14 @@
 
                 describe('always', function () {
                     beforeEach(function () {
-                        $('.subtitles-menu').trigger(jQuery.Event('mouseout'));
+                        $('.subtitles').trigger(jQuery.Event('mouseout'));
                     });
 
                     it('reset the freezing timeout', function () {
                         expect(window.clearTimeout).toHaveBeenCalledWith(100);
                     });
 
-                    it('unfreeze the transcript', function () {
+                    it('unfreeze the caption', function () {
                         expect(state.videoCaption.frozen).toBeNull();
                     });
                 });
@@ -553,12 +477,12 @@
                 describe('when the player is playing', function () {
                     beforeEach(function () {
                         state.videoCaption.playing = true;
-                        $('.subtitles-menu li[data-index]:first')
+                        $('.subtitles li[data-index]:first')
                             .addClass('current');
-                        $('.subtitles-menu').trigger(jQuery.Event('mouseout'));
+                        $('.subtitles').trigger(jQuery.Event('mouseout'));
                     });
 
-                    it('scroll the transcript', function () {
+                    it('scroll the caption', function () {
                         expect($.fn.scrollTo).toHaveBeenCalled();
                     });
                 });
@@ -566,10 +490,10 @@
                 describe('when the player is not playing', function () {
                     beforeEach(function () {
                         state.videoCaption.playing = false;
-                        $('.subtitles-menu').trigger(jQuery.Event('mouseout'));
+                        $('.subtitles').trigger(jQuery.Event('mouseout'));
                     });
 
-                    it('does not scroll the transcript', function () {
+                    it('does not scroll the caption', function () {
                         expect($.fn.scrollTo).not.toHaveBeenCalled();
                     });
                 });
@@ -590,7 +514,7 @@
                 spyOn(state, 'youtubeId').andReturn('Z5KLxerq05Y');
             });
 
-            it('show transcript on language change', function () {
+            it('show caption on language change', function () {
                 Caption.loaded = true;
                 Caption.fetchCaption();
 
@@ -598,7 +522,7 @@
                 expect(Caption.hideCaptions).toHaveBeenCalledWith(false);
             });
 
-            msg = 'use cookie to show/hide transcripts if they have not been ' +
+            msg = 'use cookie to show/hide captions if they have not been ' +
                     'loaded yet';
             it(msg, function () {
                 Caption.loaded = false;
@@ -630,7 +554,7 @@
             });
 
             msg = 'on success: change language on touch devices when ' +
-                 'transcripts have not been rendered yet';
+                 'captions have not been rendered yet';
             it(msg, function () {
                 state.isTouch = true;
                 Caption.loaded = true;
@@ -680,7 +604,7 @@
                 expect(Caption.loaded).toBeTruthy();
             });
 
-            msg = 'on error: transcripts are hidden if there are no transcripts';
+            msg = 'on error: captions are hidden if there are no transcripts';
             it(msg, function () {
                 spyOn(Caption, 'fetchAvailableTranslations');
                 $.ajax.andCallFake(function (settings) {
@@ -695,54 +619,12 @@
                 expect(Caption.fetchAvailableTranslations).not.toHaveBeenCalled();
                 expect(Caption.hideCaptions.mostRecentCall.args)
                     .toEqual([true, false]);
-            });
-
-            msg = 'on error: for Html5 player an attempt to fetch transcript ' +
-                    'with youtubeId if there are no additional transcripts';
-            it(msg, function () {
-                spyOn(Caption, 'fetchAvailableTranslations');
-                spyOn(Caption, 'fetchCaption').andCallThrough();
-                $.ajax.andCallFake(function (settings) {
-                    _.result(settings, 'error');
-                });
-
-                state.config.transcriptLanguages = {};
-                state.videoType = 'html5';
-
-                Caption.fetchCaption();
-
-                expect(Caption.fetchAvailableTranslations).not.toHaveBeenCalled();
-                expect($.ajaxWithPrefix.mostRecentCall.args[0]['data'])
-                    .toEqual({'videoId':'Z5KLxerq05Y'});
-                expect(Caption.hideCaptions.mostRecentCall.args)
-                    .toEqual([true, false]);
-                expect(Caption.fetchCaption.mostRecentCall.args[0]).toEqual(true);
-                expect(Caption.fetchCaption.callCount).toEqual(2);
-            });
-
-            msg = 'on success: when fetchCaption called with fetch_with_youtubeId to ' +
-                    'get transcript with youtubeId for html5';
-            it(msg, function () {
-                spyOn(Caption, 'fetchAvailableTranslations');
-                spyOn(Caption, 'fetchCaption').andCallThrough();
-
-                Caption.loaded = true;
-                state.config.transcriptLanguages = {};
-                state.videoType = 'html5';
-
-                Caption.fetchCaption(true);
-
-                expect(Caption.fetchAvailableTranslations).not.toHaveBeenCalled();
-                expect($.ajaxWithPrefix.mostRecentCall.args[0]['data'])
-                    .toEqual({'videoId':'Z5KLxerq05Y'});
-                expect(Caption.hideCaptions).toHaveBeenCalledWith(false);
-                expect(Caption.fetchCaption.mostRecentCall.args[0]).toEqual(true);
-                expect(Caption.fetchCaption.callCount).toEqual(1);
+                expect(Caption.hideSubtitlesEl).toBeHidden();
             });
 
             msg = 'on error: fetch available translations if there are ' +
                     'additional transcripts';
-            it(msg, function () {
+            xit(msg, function () {
                 $.ajax
                     .andCallFake(function (settings) {
                         _.result(settings, 'error');
@@ -758,6 +640,7 @@
 
                 expect($.ajaxWithPrefix).toHaveBeenCalled();
                 expect(Caption.fetchAvailableTranslations).toHaveBeenCalled();
+                expect(Caption.hideCaptions).not.toHaveBeenCalled();
             });
         });
 
@@ -819,7 +702,7 @@
                 expect(Caption.renderLanguageMenu).not.toHaveBeenCalled();
             });
 
-            msg = 'on error: transcripts are hidden if there are no transcript';
+            msg = 'on error: captions are hidden if there are no transcript';
             it(msg, function () {
                 $.ajax.andCallFake(function (settings) {
                     _.result(settings, 'error');
@@ -828,12 +711,12 @@
 
                 expect($.ajaxWithPrefix).toHaveBeenCalled();
                 expect(Caption.hideCaptions).toHaveBeenCalledWith(true, false);
-                expect(Caption.subtitlesEl).toBeHidden();
+                expect(Caption.hideSubtitlesEl).toBeHidden();
             });
         });
 
         describe('play', function () {
-            describe('when the transcript was not rendered', function () {
+            describe('when the caption was not rendered', function () {
                 beforeEach(function () {
                     window.onTouchBasedDevice.andReturn(['iPad']);
 
@@ -844,10 +727,10 @@
 
                     waitsFor(function () {
                         return state.videoCaption.rendered;
-                    }, 'Transcripts are not rendered', WAIT_TIMEOUT);
+                    }, 'Captions are not rendered', WAIT_TIMEOUT);
                 });
 
-                it('render the transcript', function () {
+                it('render the caption', function () {
                     runs(function () {
                         var captionsData;
 
@@ -866,7 +749,7 @@
 
                 });
 
-                it('add a padding element to transcript', function () {
+                it('add a padding element to caption', function () {
                     runs(function () {
                         expect($('.subtitles li:first')).toBe('.spacing');
                         expect($('.subtitles li:last')).toBe('.spacing');
@@ -907,7 +790,7 @@
 
                 waitsFor(function () {
                     return state.videoCaption.rendered;
-                }, 'Transcripts are not rendered', WAIT_TIMEOUT);
+                }, 'Captions are not rendered', WAIT_TIMEOUT);
             });
 
             describe('when the video speed is 1.0x', function () {
@@ -926,7 +809,7 @@
             });
 
             describe('when the video speed is not 1.0x', function () {
-                it('search the transcript based on 1.0x speed', function () {
+                it('search the caption based on 1.0x speed', function () {
                     runs(function () {
                         state.videoCaption.updatePlayTime(25.000);
                         expect(state.videoCaption.currentIndex).toEqual(5);
@@ -956,14 +839,14 @@
                     });
                 });
 
-                it('deactivate the previous transcript', function () {
+                it('deactivate the previous caption', function () {
                     runs(function () {
                         expect($('.subtitles li[data-index=1]'))
                             .not.toHaveClass('current');
                     });
                 });
 
-                it('activate new transcript', function () {
+                it('activate new caption', function () {
                     runs(function () {
                         expect($('.subtitles li[data-index=5]'))
                             .toHaveClass('current');
@@ -976,7 +859,7 @@
                     });
                 });
 
-                it('scroll transcript to new position', function () {
+                it('scroll caption to new position', function () {
                     runs(function () {
                         expect($.fn.scrollTo).toHaveBeenCalled();
                     });
@@ -1004,7 +887,7 @@
 
                 waitsFor(function () {
                     return state.videoCaption.rendered;
-                }, 'Transcripts are not rendered', WAIT_TIMEOUT);
+                }, 'Captions are not rendered', WAIT_TIMEOUT);
 
                 runs(function () {
                     videoControl = state.videoControl;
@@ -1013,8 +896,8 @@
                 });
             });
 
-            describe('set the height of transcript container', function () {
-                it('when transcript button is enabled', function () {
+            describe('set the height of caption container', function () {
+                it('when CC button is enabled', function () {
                     runs(function () {
                         var realHeight = parseInt(
                                 $('.subtitles').css('maxHeight'), 10
@@ -1027,7 +910,7 @@
                     });
                 });
 
-                it('when transcript button is disabled ', function () {
+                it('when CC button is disabled ', function () {
                     runs(function () {
                         var realHeight, videoWrapperHeight, progressSliderHeight,
                             controlHeight, shouldBeHeight;
@@ -1050,7 +933,7 @@
                 });
             });
 
-            it('set the height of transcript spacing', function () {
+            it('set the height of caption spacing', function () {
                 runs(function () {
                     var firstSpacing, lastSpacing;
 
@@ -1068,7 +951,7 @@
                 });
             });
 
-            it('scroll transcript to new position', function () {
+            it('scroll caption to new position', function () {
                 runs(function () {
                     expect($.fn.scrollTo).toHaveBeenCalled();
                 });
@@ -1083,11 +966,11 @@
 
                 waitsFor(function () {
                     return state.videoCaption.rendered;
-                }, 'Transcripts are not rendered', WAIT_TIMEOUT);
+                }, 'Captions are not rendered', WAIT_TIMEOUT);
             });
 
             describe('when frozen', function () {
-                it('does not scroll the transcript', function () {
+                it('does not scroll the caption', function () {
                     runs(function () {
                         state.videoCaption.frozen = true;
                         $('.subtitles li[data-index=1]').addClass('current');
@@ -1104,8 +987,8 @@
                     });
                 });
 
-                describe('when there is no current transcript', function () {
-                    it('does not scroll the transcript', function () {
+                describe('when there is no current caption', function () {
+                    it('does not scroll the caption', function () {
                         runs(function () {
                             state.videoCaption.scrollCaption();
                             expect($.fn.scrollTo).not.toHaveBeenCalled();
@@ -1113,8 +996,8 @@
                     });
                 });
 
-                describe('when there is a current transcript', function () {
-                    it('scroll to current transcript', function () {
+                describe('when there is a current caption', function () {
+                    it('scroll to current caption', function () {
                         runs(function () {
                             $('.subtitles li[data-index=1]').addClass('current');
                             state.videoCaption.scrollCaption();
@@ -1136,7 +1019,7 @@
                         isRendered = state.videoCaption.rendered;
 
                     return isRendered && duration;
-                }, 'Transcripts are not rendered', WAIT_TIMEOUT);
+                }, 'Captions are not rendered', WAIT_TIMEOUT);
             });
 
             describe('when the video speed is 1.0x', function () {
@@ -1178,30 +1061,40 @@
                 $('.subtitles li[data-index=1]').addClass('current');
             });
 
-            describe('when the transcript is visible', function () {
+            describe('when the caption is visible', function () {
                 beforeEach(function () {
                     state.el.removeClass('closed');
                     state.videoCaption.toggle(jQuery.Event('click'));
                 });
 
-                it('hide the transcript', function () {
+                it('hide the caption', function () {
                     expect(state.el).toHaveClass('closed');
+                });
+
+                it('changes ARIA attribute of caption control', function () {
+                    expect($('a.hide-subtitles'))
+                        .toHaveAttr('title', 'Turn on captions');
                 });
             });
 
-            describe('when the transcript is hidden', function () {
+            describe('when the caption is hidden', function () {
                 beforeEach(function () {
                     state.el.addClass('closed');
                     state.videoCaption.toggle(jQuery.Event('click'));
                     jasmine.Clock.useMock();
                 });
 
-                it('show the transcript', function () {
+                it('show the caption', function () {
                     expect(state.el).not.toHaveClass('closed');
                 });
 
+                it('changes ARIA attribute of caption control', function () {
+                    expect($('a.hide-subtitles'))
+                        .toHaveAttr('title', 'Turn off captions');
+                });
+
                 // Test turned off due to flakiness (11/25/13)
-                xit('scroll the transcript', function () {
+                xit('scroll the caption', function () {
                     // After transcripts are shown, and the video plays for a
                     // bit.
                     jasmine.Clock.tick(1000);
@@ -1217,7 +1110,7 @@
             });
         });
 
-        describe('transcript accessibility', function () {
+        describe('caption accessibility', function () {
             beforeEach(function () {
                 runs(function () {
                     state = jasmine.initializePlayer();
@@ -1225,7 +1118,7 @@
 
                 waitsFor(function () {
                     return state.videoCaption.rendered;
-                }, 'Transcripts are not rendered', WAIT_TIMEOUT);
+                }, 'Captions are not rendered', WAIT_TIMEOUT);
             });
 
             describe('when getting focus through TAB key', function () {
@@ -1238,7 +1131,7 @@
                     });
                 });
 
-                it('shows an outline around the transcript', function () {
+                it('shows an outline around the caption', function () {
                     runs(function () {
                         expect($('.subtitles li[data-index=0]'))
                             .toHaveClass('focused');
@@ -1261,7 +1154,7 @@
                     });
                 });
 
-                it('does not show an outline around the transcript', function () {
+                it('does not show an outline around the caption', function () {
                     runs(function () {
                         expect($('.subtitles li[data-index=0]'))
                             .not.toHaveClass('focused');
@@ -1276,7 +1169,7 @@
             });
 
             describe(
-                'when same transcript gets the focus through mouse after ' +
+                'when same caption gets the focus through mouse after ' +
                 'having focus through TAB key',
                 function () {
 
@@ -1305,7 +1198,7 @@
             });
 
             describe(
-                'when a second transcript gets focus through mouse after ' +
+                'when a second caption gets focus through mouse after ' +
                 'first had focus through TAB key',
                 function () {
 

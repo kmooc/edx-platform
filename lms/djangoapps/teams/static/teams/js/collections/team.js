@@ -1,31 +1,24 @@
 ;(function (define) {
     'use strict';
-    define(['teams/js/collections/base', 'teams/js/models/team', 'gettext'],
-        function(BaseCollection, TeamModel, gettext) {
-            var TeamCollection = BaseCollection.extend({
-                sortField: 'last_activity_at',
-
+    define(['common/js/components/collections/paging_collection', 'teams/js/models/team', 'gettext'],
+        function(PagingCollection, TeamModel, gettext) {
+            var TeamCollection = PagingCollection.extend({
                 initialize: function(teams, options) {
-                    var self = this;
-                    BaseCollection.prototype.initialize.call(this, options);
+                    PagingCollection.prototype.initialize.call(this);
 
-                    this.server_api = _.extend(
-                        {
-                            topic_id: this.topic_id = options.topic_id,
-                            expand: 'user',
-                            course_id: function () { return encodeURIComponent(self.course_id); },
-                            order_by: function () { return self.searchString ? '' : this.sortField; }
-                        },
-                        BaseCollection.prototype.server_api
-                    );
-                    delete this.server_api.sort_order; // Sort order is not specified for the Team API
+                    this.course_id = options.course_id;
+                    this.server_api['topic_id'] = this.topic_id = options.topic_id;
+                    this.perPage = options.per_page;
+                    this.server_api['course_id'] = function () { return encodeURIComponent(this.course_id); };
+                    this.server_api['order_by'] = function () { return 'name'; }; // TODO surface sort order in UI
+                    delete this.server_api['sort_order']; // Sort order is not specified for the Team API
 
-                    this.registerSortableField('last_activity_at', gettext('last activity'));
-                    this.registerSortableField('open_slots', gettext('open slots'));
+                    this.registerSortableField('name', gettext('name'));
+                    this.registerSortableField('open_slots', gettext('open_slots'));
                 },
 
                 model: TeamModel
             });
             return TeamCollection;
-        });
+    });
 }).call(this, define || RequireJS.define);

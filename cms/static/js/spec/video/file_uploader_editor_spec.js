@@ -1,8 +1,8 @@
 define(
     [
-        'jquery', 'underscore', 'squire'
+        'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers', 'squire'
     ],
-function ($, _, Squire) {
+function ($, _, AjaxHelpers, Squire) {
     'use strict';
     describe('FileUploader', function () {
         var FileUploaderTemplate = readFixtures(
@@ -12,6 +12,7 @@ function ($, _, Squire) {
                 'metadata-file-uploader-item.underscore'
             ),
             locator = 'locator',
+            feedbackTpl = readFixtures('system-feedback.underscore'),
             modelStub = {
                 default_value: 'http://example.org/test_1',
                 display_name: 'File Upload',

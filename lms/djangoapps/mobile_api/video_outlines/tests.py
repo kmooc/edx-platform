@@ -2,7 +2,7 @@
 """
 Tests for video outline API
 """
-
+# pylint: disable=no-member
 import ddt
 import itertools
 from uuid import uuid4
@@ -17,9 +17,6 @@ from xmodule.partitions.partitions import Group, UserPartition
 
 from openedx.core.djangoapps.course_groups.tests.helpers import CohortFactory
 from openedx.core.djangoapps.course_groups.models import CourseUserGroupPartitionGroup
-from openedx.core.djangoapps.course_groups.cohorts import add_user_to_cohort, remove_user_from_cohort
-
-from milestones.tests.utils import MilestonesTestCaseMixin
 
 from ..testutils import MobileAPITestCase, MobileAuthTestMixin, MobileCourseAccessTestMixin
 
@@ -409,8 +406,9 @@ class TestNonStandardCourseStructure(MobileAPITestCase, TestVideoAPIMixin):
 
 
 @ddt.ddt
-class TestVideoSummaryList(TestVideoAPITestCase, MobileAuthTestMixin, MobileCourseAccessTestMixin,
-                           TestVideoAPIMixin, MilestonesTestCaseMixin):
+class TestVideoSummaryList(
+    TestVideoAPITestCase, MobileAuthTestMixin, MobileCourseAccessTestMixin, TestVideoAPIMixin  # pylint: disable=bad-continuation
+):
     """
     Tests for /api/mobile/v0.5/video_outlines/courses/{course_id}..
     """
@@ -746,7 +744,7 @@ class TestVideoSummaryList(TestVideoAPITestCase, MobileAuthTestMixin, MobileCour
 
         for cohort_index in range(len(cohorts)):
             # add user to this cohort
-            add_user_to_cohort(cohorts[cohort_index], self.user.username)
+            cohorts[cohort_index].users.add(self.user)
 
             # should only see video for this cohort
             video_outline = self.api_response().data
@@ -757,7 +755,7 @@ class TestVideoSummaryList(TestVideoAPITestCase, MobileAuthTestMixin, MobileCour
             )
 
             # remove user from this cohort
-            remove_user_from_cohort(cohorts[cohort_index], self.user.username)
+            cohorts[cohort_index].users.remove(self.user)
 
         # un-cohorted user should see no videos
         video_outline = self.api_response().data
@@ -864,8 +862,9 @@ class TestVideoSummaryList(TestVideoAPITestCase, MobileAuthTestMixin, MobileCour
             )
 
 
-class TestTranscriptsDetail(TestVideoAPITestCase, MobileAuthTestMixin, MobileCourseAccessTestMixin,
-                            TestVideoAPIMixin, MilestonesTestCaseMixin):
+class TestTranscriptsDetail(
+    TestVideoAPITestCase, MobileAuthTestMixin, MobileCourseAccessTestMixin, TestVideoAPIMixin  # pylint: disable=bad-continuation
+):
     """
     Tests for /api/mobile/v0.5/video_outlines/transcripts/{course_id}..
     """

@@ -37,7 +37,8 @@ define([
             }));
             this.renderItems();
             this.$el.find(this.spinner).hide();
-            this.showResults();
+            this.$contentElement.hide();
+            this.$el.show();
             return this;
         },
 
@@ -70,29 +71,16 @@ define([
             this.$contentElement.show();
         },
 
-        showResults: function() {
+        showLoadingMessage: function () {
+            this.$el.html(this.loadingTemplate());
             this.$el.show();
             this.$contentElement.hide();
         },
 
-        showLoadingMessage: function () {
-            this.doCleanup();
-            this.$el.html(this.loadingTemplate());
-            this.showResults();
-        },
-
         showErrorMessage: function () {
             this.$el.html(this.errorTemplate());
-            this.showResults();
-        },
-
-        doCleanup: function () {
-            // Empty any loading/error message and empty the el
-            // Bookmarks share the same container element, So we are doing
-            // this to ensure that elements are in clean/initial state
-            $('#loading-message').html('');
-            $('#error-message').html('');
-            this.$el.html('');
+            this.$el.show();
+            this.$contentElement.hide();
         },
 
         loadNext: function (event) {

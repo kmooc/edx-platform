@@ -60,10 +60,7 @@ class CourseAuthorizationFormTest(ModuleStoreTestCase):
             "Course authorization with this Course id already exists.",
             form._errors['course_id'][0]  # pylint: disable=protected-access
         )
-        with self.assertRaisesRegexp(
-            ValueError,
-            "The CourseAuthorization could not be created because the data didn't validate."
-        ):
+        with self.assertRaisesRegexp(ValueError, "The CourseAuthorization could not be created because the data didn't validate."):
             form.save()
 
         # Course should still be authorized (invalid attempt had no effect)
@@ -84,10 +81,7 @@ class CourseAuthorizationFormTest(ModuleStoreTestCase):
         msg += 'Please recheck that you have supplied a valid course id.'
         self.assertEquals(msg, form._errors['course_id'][0])  # pylint: disable=protected-access
 
-        with self.assertRaisesRegexp(
-            ValueError,
-            "The CourseAuthorization could not be created because the data didn't validate."
-        ):
+        with self.assertRaisesRegexp(ValueError, "The CourseAuthorization could not be created because the data didn't validate."):
             form.save()
 
     @patch.dict(settings.FEATURES, {'ENABLE_INSTRUCTOR_EMAIL': True, 'REQUIRE_COURSE_EMAIL_AUTH': True})
@@ -102,10 +96,7 @@ class CourseAuthorizationFormTest(ModuleStoreTestCase):
         msg += 'Please recheck that you have supplied a valid course id.'
         self.assertEquals(msg, form._errors['course_id'][0])  # pylint: disable=protected-access
 
-        with self.assertRaisesRegexp(
-            ValueError,
-            "The CourseAuthorization could not be created because the data didn't validate."
-        ):
+        with self.assertRaisesRegexp(ValueError, "The CourseAuthorization could not be created because the data didn't validate."):
             form.save()
 
     @patch.dict(settings.FEATURES, {'ENABLE_INSTRUCTOR_EMAIL': True, 'REQUIRE_COURSE_EMAIL_AUTH': True})
@@ -116,14 +107,11 @@ class CourseAuthorizationFormTest(ModuleStoreTestCase):
         # Validation shouldn't work
         self.assertFalse(form.is_valid())
 
-        error_msg = form._errors['course_id'][0]  # pylint: disable=protected-access
+        error_msg = form._errors['course_id'][0]
         self.assertIn(u'--- Entered course id was: "{0}". '.format(self.course.id.run), error_msg)
         self.assertIn(u'Please recheck that you have supplied a valid course id.', error_msg)
 
-        with self.assertRaisesRegexp(
-            ValueError,
-            "The CourseAuthorization could not be created because the data didn't validate."
-        ):
+        with self.assertRaisesRegexp(ValueError, "The CourseAuthorization could not be created because the data didn't validate."):
             form.save()
 
 
@@ -146,10 +134,7 @@ class CourseAuthorizationXMLFormTest(ModuleStoreTestCase):
         msg += u'"{0}" appears to be an XML backed course.'.format(course_id.to_deprecated_string())
         self.assertEquals(msg, form._errors['course_id'][0])  # pylint: disable=protected-access
 
-        with self.assertRaisesRegexp(
-            ValueError,
-            "The CourseAuthorization could not be created because the data didn't validate."
-        ):
+        with self.assertRaisesRegexp(ValueError, "The CourseAuthorization could not be created because the data didn't validate."):
             form.save()
 
 

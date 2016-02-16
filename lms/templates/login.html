@@ -6,6 +6,7 @@ from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext as _
 import third_party_auth
 from third_party_auth import provider, pipeline
+from microsite_configuration import microsite
 %>
 
 <%block name="pagetitle">${_("Log into your {platform_name} Account").format(platform_name=platform_name)}</%block>
@@ -218,7 +219,7 @@ from third_party_auth import provider, pipeline
 
     <div class="form-actions form-third-party-auth">
 
-    % for enabled in provider.Registry.accepting_logins():
+    % for enabled in provider.Registry.enabled():
       ## Translators: provider_name is the name of an external, third-party user authentication provider (like Google or LinkedIn).
       <button type="submit" class="button button-primary button-${enabled.provider_id} login-${enabled.provider_id}" onclick="thirdPartySignin(event, '${pipeline_url[enabled.provider_id]}');"><span class="icon fa ${enabled.icon_class}"></span>${_('Sign in with {provider_name}').format(provider_name=enabled.name)}</button>
     % endfor
@@ -232,8 +233,8 @@ from third_party_auth import provider, pipeline
   <aside role="complementary">
 
 <%
-  # allow for theming overrides on the registration sidebars, otherwise default to pre-existing ones
-  sidebar_file = static.get_template_path('login-sidebar.html')
+  # allow for microsite overrides on the registration sidebars, otherwise default to pre-existing ones
+  sidebar_file = microsite.get_template_path('login-sidebar.html')
 %>
 
     <%include file="${sidebar_file}" />

@@ -15,49 +15,48 @@
   ol.course-tabs {
     @include border-top-radius(4px);
     @include clearfix();
+    @include margin-left(10px);
     padding: ($baseline*0.75) 0 ($baseline*0.75) 0;
 
     li {
       @include float(left);
       list-style: none;
+      margin-right: 6px;
 
       &.prominent {
-        @include margin-right(16px);
-        background: rgba(255, 255, 255, 0.5);
+        margin-right: 16px;
+        background: rgba(255, 255, 255, .5);
         border-radius: 3px;
       }
 
       &.prominent + li {
-        @include padding-left($baseline*0.75);
-        @include border-left(1px solid $gray-d3);
+          padding-left: ($baseline*0.75);
+          border-left: 1px solid #333;
       }
 
       a {
-        @include padding(($baseline/2), ($baseline*0.75), 13px, ($baseline*0.75));
-        @extend %t-title7;
-        @extend %t-regular;
-        border-bottom: 3px solid transparent;
-        color: $gray-d1;
+        border-radius: 3px;
+        color: #555;
         display: block;
         text-align: center;
+        padding: ($baseline/2) 13px 12px;
+        font-size: 14px;
+        font-weight: bold;
         text-decoration: none;
         // text-shadow: 0 1px 0 rgba(0, 0, 0, .4);
 
-        &:hover,
-        &:focus {
-          color: $blue;
-          border-bottom: 3px solid $blue;
+        &:hover, &:focus {
+          color: #333;
+          background: rgba(255, 255, 255, .6);
         }
 
         &.active {
-          border-bottom: 3px solid $gray-d4;
+          // background: $shadow;
+          @include linear-gradient(top, rgba(0, 0, 0, .4), rgba(0, 0, 0, .25));
           background-color: transparent;
-          color: $gray-d4;
-
-          &:hover,
-          &:focus {
-            color: $gray-d4;
-          }
+          box-shadow: 0 1px 0 rgba(255, 255, 255, .5), 0 1px 1px rgba(0, 0, 0, .3) inset;
+          color: $white;
+          text-shadow: 0 1px 0 rgba(0, 0, 0, .4);
         }
       }
     }
@@ -88,8 +87,10 @@ header.global.slim {
   }
 
   .guest .secondary {
-    @include margin-right(0);
+    margin-right: 0;
   }
+
+  .user {margin-top:15px;}
 
   .guest .secondary a {
     display: none;
@@ -128,7 +129,7 @@ header.global.slim {
   }
 
   h1.logo {
-    margin: 0 ($baseline/2) 0 0;
+    margin: ($baseline/2) ($baseline/2) ($baseline/2) 0;
     @include padding-right(20px);
 
     &:before {
@@ -165,13 +166,13 @@ header.global.slim {
 
   h2 {
     display: block;
-    width: 65%;
+    width: auto;
     @include float(left);
     font-size: 0.9em;
     font-weight: 600;
     color: $lighter-base-font-color;
     letter-spacing: 0;
-    margin-top: 9px;
+    margin-top: 22px;
     margin-bottom: 0;
     text-transform: none;
     text-shadow: 0 1px 0 #fff;

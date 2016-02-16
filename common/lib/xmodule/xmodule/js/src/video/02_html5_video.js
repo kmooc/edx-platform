@@ -99,7 +99,7 @@ function () {
                 .find('.video-player div')
                     .addClass('hidden')
                 .end()
-                .find('.video-player .video-error')
+                .find('.video-player h3')
                     .removeClass('hidden')
                 .end()
                     .addClass('is-initialized')
@@ -125,7 +125,7 @@ function () {
             this.el
                 .find('.video-player div').removeClass('hidden')
                 .end()
-                .find('.video-player .video-error').addClass('hidden')
+                .find('.video-player h3').addClass('hidden')
                 .end().removeClass('is-initialized')
                 .find('.spinner').attr({'aria-hidden': 'false'});
             this.videoEl.remove();

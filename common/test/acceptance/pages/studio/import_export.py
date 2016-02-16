@@ -1,16 +1,11 @@
 """
 Import/Export pages.
 """
-import time
-from datetime import datetime
-
 from bok_choy.promise import EmptyPromise
 import os
 import re
 import requests
-
-from ..common.utils import click_css
-
+from .utils import click_css
 from .library import LibraryPage
 from .course_page import CoursePage
 from . import BASE_URL
@@ -133,15 +128,6 @@ class ImportMixin(object):
         string = self.q(css='.item-progresspoint-success-date').text[0]
 
         return re.match(r'\(([^ ]+).+?(\d{2}:\d{2})', string).groups()
-
-    @property
-    def parsed_timestamp(self):
-        """
-        Return python datetime object from the parsed timestamp tuple (date, time)
-        """
-        timestamp = "{0} {1}".format(*self.timestamp)
-        formatted_timestamp = time.strptime(timestamp, "%m/%d/%Y %H:%M")
-        return datetime.fromtimestamp(time.mktime(formatted_timestamp))
 
     def is_browser_on_page(self):
         """

@@ -2,7 +2,9 @@
 """
 Student dashboard page.
 """
+
 from bok_choy.page_object import PageObject
+from bok_choy.promise import EmptyPromise
 from . import BASE_URL
 
 
@@ -48,15 +50,18 @@ class DashboardPage(PageObject):
         return self.q(css='h3.course-title > a').map(_get_course_name).results
 
     @property
-    def banner_text(self):
+    def sidebar_menu_title(self):
         """
-        Return the text of the banner on top of the page, or None if
-        the banner is not present.
+        Return the title value for sidebar menu.
         """
-        message = self.q(css='div.wrapper-msg')
-        if message.present:
-            return message.text[0]
-        return None
+        return self.q(css='.user-info span.title').text[0]
+
+    @property
+    def sidebar_menu_description(self):
+        """
+        Return the description text for sidebar menu.
+        """
+        return self.q(css='.user-info span.copy').text[0]
 
     def get_enrollment_mode(self, course_name):
         """Get the enrollment mode for a given course on the dashboard.
@@ -156,18 +161,6 @@ class DashboardPage(PageObject):
         """ Retrieves the specified social sharing widget by its classification """
         return self.q(css='a.action-{}'.format(widget_name))
 
-    def get_courses(self):
-        """
-        Get all courses shown in the dashboard
-        """
-        return self.q(css='ul.listing-courses .course-item')
-
-    def get_course_date(self):
-        """
-        Get course date of the first course from dashboard
-        """
-        return self.q(css='ul.listing-courses .course-item .info-date-block').first.text[0]
-
     def click_username_dropdown(self):
         """
         Click username dropdown.
@@ -181,25 +174,14 @@ class DashboardPage(PageObject):
         """
         return self.q(css='.dropdown-menu li a').text
 
-    def click_my_profile_link(self):
-        """
-        Click on `Profile` link.
-        """
-        self.q(css='.dropdown-menu li a').nth(1).click()
-
     def click_account_settings_link(self):
         """
-        Click on `Account` link.
+        Click on `Account Settings` link.
         """
-        self.q(css='.dropdown-menu li a').nth(2).click()
+        self.q(css='.dropdown-menu li a').first.click()
 
-    @property
-    def language_selector(self):
+    def click_my_profile_link(self):
         """
-        return language selector
+        Click on `My Profile` link.
         """
-        self.wait_for_element_visibility(
-            '#settings-language-value',
-            'Language selector element is available'
-        )
-        return self.q(css='#settings-language-value')
+        self.q(css='.dropdown-menu li a').nth(1).click()

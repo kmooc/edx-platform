@@ -2,23 +2,22 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
         "common/js/spec_helpers/template_helpers", "js/spec_helpers/edit_helpers",
         "js/views/pages/container", "js/views/pages/paged_container", "js/models/xblock_info", "jquery.simulate"],
     function ($, _, str, AjaxHelpers, TemplateHelpers, EditHelpers, ContainerPage, PagedContainerPage, XBlockInfo) {
-        'use strict';
 
-        function parameterized_suite(label, globalPageOptions) {
+        function parameterized_suite(label, global_page_options, fixtures) {
             describe(label + " ContainerPage", function () {
-                var getContainerPage, renderContainerPage, handleContainerPageRefresh, expectComponents,
-                    respondWithHtml, model, containerPage, requests, initialDisplayName,
+                var lastRequest, getContainerPage, renderContainerPage, expectComponents, respondWithHtml,
+                    model, containerPage, requests, initialDisplayName,
                     mockContainerPage = readFixtures('mock/mock-container-page.underscore'),
-                    mockContainerXBlockHtml = readFixtures(globalPageOptions.initial),
-                    mockXBlockHtml = readFixtures(globalPageOptions.addResponse),
+                    mockContainerXBlockHtml = readFixtures(fixtures.initial),
+                    mockXBlockHtml = readFixtures(fixtures.add_response),
                     mockBadContainerXBlockHtml = readFixtures('mock/mock-bad-javascript-container-xblock.underscore'),
                     mockBadXBlockContainerXBlockHtml = readFixtures('mock/mock-bad-xblock-container-xblock.underscore'),
                     mockUpdatedContainerXBlockHtml = readFixtures('mock/mock-updated-container-xblock.underscore'),
                     mockXBlockEditorHtml = readFixtures('mock/mock-xblock-editor.underscore'),
                     mockXBlockVisibilityEditorHtml = readFixtures('mock/mock-xblock-visibility-editor.underscore'),
-                    PageClass = globalPageOptions.page,
-                    pagedSpecificTests = globalPageOptions.pagedSpecificTests,
-                    hasVisibilityEditor = globalPageOptions.hasVisibilityEditor;
+                    PageClass = fixtures.page,
+                    pagedSpecificTests = fixtures.paged_specific_tests,
+                    hasVisibilityEditor = fixtures.has_visibility_editor;
 
                 beforeEach(function () {
                     var newDisplayName = 'New Display Name';
@@ -48,10 +47,16 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                     EditHelpers.uninstallMockXBlock();
                 });
 
+                lastRequest = function () {
+                    return requests[requests.length - 1];
+                };
+
                 respondWithHtml = function (html) {
+                    var requestIndex = requests.length - 1;
                     AjaxHelpers.respondWithJson(
                         requests,
-                        { html: html, "resources": [] }
+                        { html: html, "resources": [] },
+                        requestIndex
                     );
                 };
 
@@ -61,7 +66,7 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                         templates: EditHelpers.mockComponentTemplates,
                         el: $('#content')
                     };
-                    return new PageClass(_.extend(options || {}, globalPageOptions, default_options));
+                    return new PageClass(_.extend(options || {}, global_page_options, default_options));
                 };
 
                 renderContainerPage = function (test, html, options) {
@@ -69,18 +74,6 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                     containerPage = getContainerPage(options);
                     containerPage.render();
                     respondWithHtml(html);
-                    AjaxHelpers.expectJsonRequest(requests, 'GET', '/xblock/locator-container');
-                    AjaxHelpers.respondWithJson(requests, options);
-                };
-
-                handleContainerPageRefresh = function(requests) {
-                    var request = AjaxHelpers.currentRequest(requests);
-                    expect(str.startsWith(request.url,
-                        '/xblock/locator-container/container_preview')).toBeTruthy();
-                    AjaxHelpers.respondWithJson(requests, {
-                        html: mockUpdatedContainerXBlockHtml,
-                        resources: []
-                    });
                 };
 
                 expectComponents = function (container, locators) {
@@ -143,7 +136,7 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                     };
 
                     it('can edit itself', function () {
-                        var editButtons, displayNameElement, request;
+                        var editButtons, displayNameElement;
                         renderContainerPage(this, mockContainerXBlockHtml);
                         displayNameElement = containerPage.$('.page-header-title');
 
@@ -152,8 +145,7 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                         editButtons.first().click();
 
                         // Expect a request to be made to show the studio view for the container
-                        request = AjaxHelpers.currentRequest(requests);
-                        expect(str.startsWith(request.url, '/xblock/locator-container/studio_view')).toBeTruthy();
+                        expect(str.startsWith(lastRequest().url, '/xblock/locator-container/studio_view')).toBeTruthy();
                         AjaxHelpers.respondWithJson(requests, {
                             html: mockContainerXBlockHtml,
                             resources: []
@@ -169,7 +161,12 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                         expect(EditHelpers.isShowingModal()).toBeFalsy();
 
                         // Expect the last request be to refresh the container page
-                        handleContainerPageRefresh(requests);
+                        expect(str.startsWith(lastRequest().url,
+                            '/xblock/locator-container/container_preview')).toBeTruthy();
+                        AjaxHelpers.respondWithJson(requests, {
+                            html: mockUpdatedContainerXBlockHtml,
+                            resources: []
+                        });
 
                         // Respond to the subsequent xblock info fetch request.
                         AjaxHelpers.respondWithJson(requests, {"display_name": updatedDisplayName});
@@ -199,15 +196,14 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                     });
 
                     it('can show an edit modal for a child xblock', function () {
-                        var editButtons, request;
+                        var editButtons;
                         renderContainerPage(this, mockContainerXBlockHtml);
                         editButtons = containerPage.$('.wrapper-xblock .edit-button');
                         // The container should have rendered six mock xblocks
                         expect(editButtons.length).toBe(6);
                         editButtons[0].click();
                         // Make sure that the correct xblock is requested to be edited
-                        request = AjaxHelpers.currentRequest(requests);
-                        expect(str.startsWith(request.url, '/xblock/locator-component-A1/studio_view')).toBeTruthy();
+                        expect(str.startsWith(lastRequest().url, '/xblock/locator-component-A1/studio_view')).toBeTruthy();
                         AjaxHelpers.respondWithJson(requests, {
                             html: mockXBlockEditorHtml,
                             resources: []
@@ -228,14 +224,13 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                     });
 
                     it('can show a visibility modal for a child xblock if supported for the page', function() {
-                        var visibilityButtons, request;
+                        var visibilityButtons;
                         renderContainerPage(this, mockContainerXBlockHtml);
                         visibilityButtons = containerPage.$('.wrapper-xblock .visibility-button');
                         if (hasVisibilityEditor) {
                             expect(visibilityButtons.length).toBe(6);
                             visibilityButtons[0].click();
-                            request = AjaxHelpers.currentRequest(requests);
-                            expect(str.startsWith(request.url, '/xblock/locator-component-A1/visibility_view'))
+                            expect(str.startsWith(lastRequest().url, '/xblock/locator-component-A1/visibility_view'))
                                 .toBeTruthy();
                             AjaxHelpers.respondWithJson(requests, {
                                 html: mockXBlockVisibilityEditorHtml,
@@ -302,7 +297,7 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                 });
 
                 describe("xblock operations", function () {
-                    var getGroupElement,
+                    var getGroupElement, paginated, getDeleteOffset,
                         NUM_COMPONENTS_PER_GROUP = 3, GROUP_TO_TEST = "A",
                         allComponentsInGroup = _.map(
                             _.range(NUM_COMPONENTS_PER_GROUP),
@@ -310,6 +305,11 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                                 return 'locator-component-' + GROUP_TO_TEST + (index + 1);
                             }
                         );
+
+                    getDeleteOffset = function () {
+                        // Paginated containers will make an additional AJAX request.
+                        return pagedSpecificTests ? 3 : 2;
+                    };
 
                     getGroupElement = function () {
                         return containerPage.$("[data-locator='locator-group-" + GROUP_TO_TEST + "']");
@@ -337,35 +337,28 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                             EditHelpers.confirmPrompt(promptSpy, clickNo);
                         };
 
-                        deleteComponent = function (componentIndex) {
+                        deleteComponent = function (componentIndex, requestOffset) {
                             clickDelete(componentIndex);
-
-                            // first request to delete the component
+                            AjaxHelpers.respondWithJson(requests, {});
                             AjaxHelpers.expectJsonRequest(requests, 'DELETE',
-                                '/xblock/locator-component-' + GROUP_TO_TEST + (componentIndex + 1),
-                                null);
-                            AjaxHelpers.respondWithNoContent(requests);
-
-                            // then handle the request to refresh the preview
-                            if (globalPageOptions.requiresPageRefresh) {
-                                handleContainerPageRefresh(requests);
-                            }
+                                    '/xblock/locator-component-' + GROUP_TO_TEST + (componentIndex + 1),
+                                null, requests.length - requestOffset);
 
                             // final request to refresh the xblock info
                             AjaxHelpers.expectJsonRequest(requests, 'GET', '/xblock/locator-container');
-                            AjaxHelpers.respondWithJson(requests, {});
                         };
 
                         deleteComponentWithSuccess = function (componentIndex) {
-                            deleteComponent(componentIndex);
+                            var deleteOffset;
 
-                            // verify the new list of components within the group (unless reloading)
-                            if (!globalPageOptions.requiresPageRefresh) {
-                                expectComponents(
-                                    getGroupElement(),
-                                    _.without(allComponentsInGroup, allComponentsInGroup[componentIndex])
-                                );
-                            }
+                            deleteOffset = getDeleteOffset();
+                            deleteComponent(componentIndex, deleteOffset);
+
+                            // verify the new list of components within the group
+                            expectComponents(
+                                getGroupElement(),
+                                _.without(allComponentsInGroup, allComponentsInGroup[componentIndex])
+                            );
                         };
 
                         it("can delete the first xblock", function () {
@@ -384,25 +377,24 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                         });
 
                         it("can delete an xblock with broken JavaScript", function () {
+                            var deleteOffset = getDeleteOffset();
                             renderContainerPage(this, mockBadContainerXBlockHtml);
                             containerPage.$('.delete-button').first().click();
                             EditHelpers.confirmPrompt(promptSpy);
+                            AjaxHelpers.respondWithJson(requests, {});
 
                             // expect the second to last request to be a delete of the xblock
-                            AjaxHelpers.expectJsonRequest(requests, 'DELETE', '/xblock/locator-broken-javascript');
-                            AjaxHelpers.respondWithNoContent(requests);
-
-                            // handle the refresh request for pages that require a full refresh on delete
-                            if (globalPageOptions.requiresPageRefresh) {
-                                handleContainerPageRefresh(requests);
-                            }
-
+                            AjaxHelpers.expectJsonRequest(requests, 'DELETE', '/xblock/locator-broken-javascript',
+                                null, requests.length - deleteOffset);
                             // expect the last request to be a fetch of the xblock info for the parent container
                             AjaxHelpers.expectJsonRequest(requests, 'GET', '/xblock/locator-container');
                         });
 
                         it('does not delete when clicking No in prompt', function () {
+                            var numRequests;
+
                             renderContainerPage(this, mockContainerXBlockHtml);
+                            numRequests = requests.length;
 
                             // click delete on the first component but press no
                             clickDelete(0, true);
@@ -411,7 +403,7 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                             expectComponents(getGroupElement(), allComponentsInGroup);
 
                             // no requests should have been sent to the server
-                            AjaxHelpers.expectNoRequests(requests);
+                            expect(requests.length).toBe(numRequests);
                         });
 
                         it('shows a notification during the delete operation', function () {
@@ -534,13 +526,13 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                                 expect(getButtonText(containerPage)).toBe("");
                             });
 
-                            var updatePreviewButtonTest = function(show_previews, expected_text) {
+                            function updatePreviewButtonTest(show_previews, expected_text) {
                                 it('can set preview button to "' + expected_text + '"', function () {
                                     containerPage = getContainerPage();
                                     containerPage.updatePreviewButton(show_previews);
                                     expect(getButtonText(containerPage)).toBe(expected_text);
                                 });
-                            };
+                            }
 
                             updatePreviewButtonTest(true, 'Hide Previews');
                             updatePreviewButtonTest(false, 'Show Previews');
@@ -560,7 +552,7 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                         var clickNewComponent;
 
                         clickNewComponent = function (index) {
-                            containerPage.$(".new-component .new-component-type button.single-template")[index].click();
+                            containerPage.$(".new-component .new-component-type a.single-template")[index].click();
                         };
 
                         it('Attaches a handler to new component button', function() {
@@ -582,25 +574,6 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                             });
                         });
 
-                        it('also works for older-style add component links', function () {
-                            // Some third party xblocks (problem-builder in particular) expect add
-                            // event handlers on custom <a> add buttons which is what the platform
-                            // used to use instead of <button>s.
-                            // This can be removed once there is a proper API that XBlocks can use
-                            // to add children or allow authors to add children.
-                            renderContainerPage(this, mockContainerXBlockHtml);
-                            $(".add-xblock-component-button").each(function() {
-                                var htmlAsLink = $($(this).prop('outerHTML').replace(/(<\/?)button/g, "$1a"));
-                                $(this).replaceWith(htmlAsLink);
-                            });
-                            $(".add-xblock-component-button").first().click();
-                            EditHelpers.verifyXBlockRequest(requests, {
-                                "category": "discussion",
-                                "type": "discussion",
-                                "parent_locator": "locator-group-A"
-                            });
-                        });
-
                         it('shows a notification while creating', function () {
                             var notificationSpy = EditHelpers.createNotificationSpy();
                             renderContainerPage(this, mockContainerXBlockHtml);
@@ -611,11 +584,13 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                         });
 
                         it('does not insert component upon failure', function () {
+                            var requestCount;
                             renderContainerPage(this, mockContainerXBlockHtml);
                             clickNewComponent(0);
+                            requestCount = requests.length;
                             AjaxHelpers.respondWithError(requests);
                             // No new requests should be made to refresh the view
-                            AjaxHelpers.expectNoRequests(requests);
+                            expect(requests.length).toBe(requestCount);
                             expectComponents(getGroupElement(), allComponentsInGroup);
                         });
 
@@ -623,7 +598,7 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                             var showTemplatePicker, verifyCreateHtmlComponent;
 
                             showTemplatePicker = function () {
-                                containerPage.$('.new-component .new-component-type button.multiple-templates')[0].click();
+                                containerPage.$('.new-component .new-component-type a.multiple-templates')[0].click();
                             };
 
                             verifyCreateHtmlComponent = function (test, templateIndex, expectedRequest) {
@@ -631,7 +606,7 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                                 renderContainerPage(test, mockContainerXBlockHtml);
                                 showTemplatePicker();
                                 xblockCount = containerPage.$('.studio-xblock-wrapper').length;
-                                containerPage.$('.new-component-html button')[templateIndex].click();
+                                containerPage.$('.new-component-html a')[templateIndex].click();
                                 EditHelpers.verifyXBlockRequest(requests, expectedRequest);
                                 AjaxHelpers.respondWithJson(requests, {"locator": "new_item"});
                                 respondWithHtml(mockXBlockHtml);
@@ -655,31 +630,31 @@ define(["jquery", "underscore", "underscore.string", "common/js/spec_helpers/aja
                         });
                     });
                 });
+
             });
         }
 
         // Create a suite for a non-paged container that includes 'edit visibility' buttons
         parameterized_suite("Non paged",
+            { },
             {
                 page: ContainerPage,
-                requiresPageRefresh: false,
                 initial: 'mock/mock-container-xblock.underscore',
-                addResponse: 'mock/mock-xblock.underscore',
-                hasVisibilityEditor: true,
-                pagedSpecificTests: false
+                add_response: 'mock/mock-xblock.underscore',
+                has_visibility_editor: true,
+                paged_specific_tests: false
             }
         );
 
         // Create a suite for a paged container that does not include 'edit visibility' buttons
         parameterized_suite("Paged",
+            { page_size: 42 },
             {
                 page: PagedContainerPage,
-                page_size: 42,
-                requiresPageRefresh: true,
                 initial: 'mock/mock-container-paged-xblock.underscore',
-                addResponse: 'mock/mock-xblock-paged.underscore',
-                hasVisibilityEditor: false,
-                pagedSpecificTests: true
+                add_response: 'mock/mock-xblock-paged.underscore',
+                has_visibility_editor: false,
+                paged_specific_tests: true
             }
         );
     });

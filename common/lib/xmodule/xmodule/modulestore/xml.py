@@ -12,7 +12,7 @@ from cStringIO import StringIO
 from fs.osfs import OSFS
 from importlib import import_module
 from lxml import etree
-from path import Path as path
+from path import path
 from contextlib import contextmanager
 from lazy import lazy
 
@@ -27,7 +27,7 @@ from xmodule.modulestore.xml_exporter import DEFAULT_CONTENT_FIELDS
 from xmodule.modulestore import ModuleStoreEnum, ModuleStoreReadBase, LIBRARY_ROOT, COURSE_ROOT
 from xmodule.tabs import CourseTabList
 from opaque_keys.edx.locations import SlashSeparatedCourseKey, Location
-from opaque_keys.edx.locator import CourseLocator, LibraryLocator, BlockUsageLocator
+from opaque_keys.edx.locator import CourseLocator, LibraryLocator
 
 from xblock.field_data import DictFieldData
 from xblock.runtime import DictKeyValueStore
@@ -799,13 +799,8 @@ class XMLModuleStore(ModuleStoreReadBase):
         def _block_matches_all(mod_loc, module):
             if category and mod_loc.category != category:
                 return False
-            if name:
-                if isinstance(name, list):
-                    # Support for passing a list as the name qualifier
-                    if mod_loc.name not in name:
-                        return False
-                elif mod_loc.name != name:
-                    return False
+            if name and mod_loc.name != name:
+                return False
             return all(
                 self._block_matches(module, fields or {})
                 for fields in [settings, content, qualifiers]
@@ -826,25 +821,12 @@ class XMLModuleStore(ModuleStoreReadBase):
         """
         return CourseLocator(org, course, run, deprecated=True)
 
-    def make_course_usage_key(self, course_key):
-        """
-        Return a valid :class:`~opaque_keys.edx.keys.UsageKey` for this modulestore
-        that matches the supplied course_key.
-        """
-        return BlockUsageLocator(course_key, 'course', course_key.run)
-
     def get_courses(self, **kwargs):
         """
         Returns a list of course descriptors.  If there were errors on loading,
         some of these may be ErrorDescriptors instead.
         """
         return self.courses.values()
-
-    def get_course_summaries(self, **kwargs):
-        """
-        Returns `self.get_courses()`. Use to list courses to the global staff user.
-        """
-        return self.get_courses(**kwargs)
 
     def get_errored_courses(self):
         """
@@ -884,7 +866,7 @@ class XMLModuleStore(ModuleStoreReadBase):
         :return: list of course locations
         """
         courses = self.get_courses()
-        return [course.location.course_key for course in courses if course.wiki_slug == wiki_slug]
+        return [course.location.course_key for course in courses if (course.wiki_slug == wiki_slug)]
 
     def heartbeat(self):
         """
@@ -927,14 +909,6 @@ class XMLModuleStore(ModuleStoreReadBase):
         """
         log.warning("get_all_asset_metadata request of XML modulestore - not implemented.")
         return []
-
-    def fill_in_run(self, course_key):
-        """
-        A no-op.
-
-        Added to simplify tests which use the XML-store directly.
-        """
-        return course_key
 
 
 class LibraryXMLModuleStore(XMLModuleStore):

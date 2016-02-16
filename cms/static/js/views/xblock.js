@@ -1,6 +1,5 @@
-define(["jquery", "underscore", "common/js/components/utils/view_utils", "js/views/baseview", "xblock/runtime.v1"],
-    function ($, _, ViewUtils, BaseView, XBlock) {
-        'use strict';
+define(["jquery", "underscore", "js/views/baseview", "xblock/runtime.v1"],
+    function ($, _, BaseView, XBlock) {
 
         var XBlockView = BaseView.extend({
             // takes XBlockInfo as a model
@@ -43,7 +42,7 @@ define(["jquery", "underscore", "common/js/components/utils/view_utils", "js/vie
                 fragmentsRendered.always(function() {
                     xblockElement = self.$('.xblock').first();
                     try {
-                        xblock = XBlock.initializeBlock(xblockElement.get(0));
+                        xblock = XBlock.initializeBlock(xblockElement);
                         self.xblock = xblock;
                         self.xblockReady(xblock);
                         if (successCallback) {
@@ -84,7 +83,7 @@ define(["jquery", "underscore", "common/js/components/utils/view_utils", "js/vie
              * may have thrown JavaScript errors after rendering in which case the xblock parameter
              * will be null.
              */
-            xblockReady: function(xblock) {  // jshint ignore:line
+            xblockReady: function(xblock) {
                 // Do nothing
             },
 
@@ -96,7 +95,7 @@ define(["jquery", "underscore", "common/js/components/utils/view_utils", "js/vie
              * represents this process.
              * @param fragment The fragment returned from the xblock_handler
              * @param element The element into which to render the fragment (defaults to this.$el)
-             * @returns {Promise} A promise representing the rendering process
+             * @returns {jQuery promise} A promise representing the rendering process
              */
             renderXBlockFragment: function(fragment, element) {
                 var html = fragment.html,
@@ -132,7 +131,7 @@ define(["jquery", "underscore", "common/js/components/utils/view_utils", "js/vie
              * Dynamically loads all of an XBlock's dependent resources. This is an asynchronous
              * process so a promise is returned.
              * @param resources The resources to be rendered
-             * @returns {Promise} A promise representing the rendering process
+             * @returns {jQuery promise} A promise representing the rendering process
              */
             addXBlockFragmentResources: function(resources) {
                 var self = this,
@@ -172,7 +171,7 @@ define(["jquery", "underscore", "common/js/components/utils/view_utils", "js/vie
             /**
              * Loads the specified resource into the page.
              * @param resource The resource to be loaded.
-             * @returns {Promise} A promise representing the loading of the resource.
+             * @returns {jQuery promise} A promise representing the loading of the resource.
              */
             loadResource: function(resource) {
                 var head = $('head'),
@@ -190,7 +189,8 @@ define(["jquery", "underscore", "common/js/components/utils/view_utils", "js/vie
                     if (kind === "text") {
                         head.append("<script>" + data + "</script>");
                     } else if (kind === "url") {
-                        return ViewUtils.loadJavaScript(data);
+                        // Return a promise for the script resolution
+                        return $.getScript(data);
                     }
                 } else if (mimetype === "text/html") {
                     if (placement === "head") {
@@ -202,11 +202,11 @@ define(["jquery", "underscore", "common/js/components/utils/view_utils", "js/vie
             },
 
             fireNotificationActionEvent: function(event) {
-                var eventName = $(event.currentTarget).data("notification-action");
-                if (eventName) {
-                    event.preventDefault();
-                    this.notifyRuntime(eventName, this.model.get("id"));
-                }
+               var eventName = $(event.currentTarget).data("notification-action");
+               if (eventName) {
+                   event.preventDefault();
+                   this.notifyRuntime(eventName, this.model.get("id"));
+               }
             }
         });
 

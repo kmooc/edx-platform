@@ -9,11 +9,8 @@ from mock import patch, Mock
 import ddt
 
 from django.test import RequestFactory
-from xmodule.course_module import CourseSummary
 
-from contentstore.views.course import (_accessible_courses_list, _accessible_courses_list_from_groups,
-                                       AccessListFallback, get_courses_accessible_to_user,
-                                       _accessible_courses_summary_list)
+from contentstore.views.course import _accessible_courses_list, _accessible_courses_list_from_groups, AccessListFallback
 from contentstore.utils import delete_course_and_groups
 from contentstore.tests.utils import AjaxEnabledTestClient
 from student.tests.factories import UserFactory
@@ -22,6 +19,7 @@ from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, check_mongo_calls
 from xmodule.modulestore import ModuleStoreEnum
 from opaque_keys.edx.locations import CourseLocator
+from xmodule.modulestore.django import modulestore
 from xmodule.error_module import ErrorDescriptor
 from course_action_state.models import CourseRerunState
 
@@ -48,7 +46,7 @@ class TestCourseListing(ModuleStoreTestCase):
         self.client = AjaxEnabledTestClient()
         self.client.login(username=self.user.username, password='test')
 
-    def _create_course_with_access_groups(self, course_location, user=None, store=ModuleStoreEnum.Type.split):
+    def _create_course_with_access_groups(self, course_location, user=None):
         """
         Create dummy course with 'CourseFactory' and role (instructor/staff) groups
         """
@@ -56,7 +54,7 @@ class TestCourseListing(ModuleStoreTestCase):
             org=course_location.org,
             number=course_location.course,
             run=course_location.run,
-            default_store=store
+            default_store=ModuleStoreEnum.Type.mongo
         )
 
         if user is not None:
@@ -83,128 +81,69 @@ class TestCourseListing(ModuleStoreTestCase):
         courses_list, __ = _accessible_courses_list(self.request)
         self.assertEqual(len(courses_list), 1)
 
-        courses_summary_list, __ = _accessible_courses_summary_list(self.request)
-        self.assertEqual(len(courses_summary_list), 1)
-
         # get courses by reversing group name formats
         courses_list_by_groups, __ = _accessible_courses_list_from_groups(self.request)
         self.assertEqual(len(courses_list_by_groups), 1)
-
         # check both course lists have same courses
         self.assertEqual(courses_list, courses_list_by_groups)
 
-    @ddt.data(
-        (ModuleStoreEnum.Type.split, 'xmodule.modulestore.split_mongo.split_mongo_kvs.SplitMongoKVS'),
-        (ModuleStoreEnum.Type.mongo, 'xmodule.modulestore.mongo.base.MongoKeyValueStore')
-    )
-    @ddt.unpack
-    def test_errored_course_global_staff(self, store, path_to_patch):
+    def test_errored_course_global_staff(self):
         """
         Test the course list for global staff when get_course returns an ErrorDescriptor
         """
         GlobalStaff().add_users(self.user)
 
-        with self.store.default_store(store):
-            course_key = self.store.make_course_key('Org1', 'Course1', 'Run1')
-            self._create_course_with_access_groups(course_key, self.user, store=store)
+        course_key = self.store.make_course_key('Org1', 'Course1', 'Run1')
+        self._create_course_with_access_groups(course_key, self.user)
 
-            with patch(path_to_patch, Mock(side_effect=Exception)):
-                self.assertIsInstance(self.store.get_course(course_key), ErrorDescriptor)
+        with patch('xmodule.modulestore.mongo.base.MongoKeyValueStore', Mock(side_effect=Exception)):
+            self.assertIsInstance(modulestore().get_course(course_key), ErrorDescriptor)
 
-                # get courses through iterating all courses
-                courses_list, __ = _accessible_courses_list(self.request)
-                self.assertEqual(courses_list, [])
+            # get courses through iterating all courses
+            courses_list, __ = _accessible_courses_list(self.request)
+            self.assertEqual(courses_list, [])
 
-                # get courses by reversing group name formats
-                courses_list_by_groups, __ = _accessible_courses_list_from_groups(self.request)
-                self.assertEqual(courses_list_by_groups, [])
+            # get courses by reversing group name formats
+            courses_list_by_groups, __ = _accessible_courses_list_from_groups(self.request)
+            self.assertEqual(courses_list_by_groups, [])
 
-    @ddt.data(
-        (ModuleStoreEnum.Type.split, 5),
-        (ModuleStoreEnum.Type.mongo, 3)
-    )
-    @ddt.unpack
-    def test_staff_course_listing(self, default_store, mongo_calls):
-        """
-        Create courses and verify they take certain amount of mongo calls to call get_courses_accessible_to_user.
-        Also verify that fetch accessible courses list for staff user returns CourseSummary instances.
-        """
-
-        # Assign & verify staff role to the user
-        GlobalStaff().add_users(self.user)
-        self.assertTrue(GlobalStaff().has_user(self.user))
-
-        with self.store.default_store(default_store):
-            # Create few courses
-            for num in xrange(TOTAL_COURSES_COUNT):
-                course_location = self.store.make_course_key('Org', 'CreatedCourse' + str(num), 'Run')
-                self._create_course_with_access_groups(course_location, self.user, default_store)
-
-        # Fetch accessible courses list & verify their count
-        courses_list_by_staff, __ = get_courses_accessible_to_user(self.request)
-        self.assertEqual(len(courses_list_by_staff), TOTAL_COURSES_COUNT)
-
-        # Verify fetched accessible courses list is a list of CourseSummery instances
-        self.assertTrue(all(isinstance(course, CourseSummary) for course in courses_list_by_staff))
-
-        # Now count the db queries for staff
-        with check_mongo_calls(mongo_calls):
-            _accessible_courses_summary_list(self.request)
-
-    @ddt.data(
-        (ModuleStoreEnum.Type.split, 'xmodule.modulestore.split_mongo.split_mongo_kvs.SplitMongoKVS'),
-        (ModuleStoreEnum.Type.mongo, 'xmodule.modulestore.mongo.base.MongoKeyValueStore')
-    )
-    @ddt.unpack
-    def test_errored_course_regular_access(self, store, path_to_patch):
+    def test_errored_course_regular_access(self):
         """
         Test the course list for regular staff when get_course returns an ErrorDescriptor
         """
         GlobalStaff().remove_users(self.user)
+        CourseStaffRole(self.store.make_course_key('Non', 'Existent', 'Course')).add_users(self.user)
 
-        with self.store.default_store(store):
-            CourseStaffRole(self.store.make_course_key('Non', 'Existent', 'Course')).add_users(self.user)
+        course_key = self.store.make_course_key('Org1', 'Course1', 'Run1')
+        self._create_course_with_access_groups(course_key, self.user)
 
-            course_key = self.store.make_course_key('Org1', 'Course1', 'Run1')
-            self._create_course_with_access_groups(course_key, self.user, store)
+        with patch('xmodule.modulestore.mongo.base.MongoKeyValueStore', Mock(side_effect=Exception)):
+            self.assertIsInstance(modulestore().get_course(course_key), ErrorDescriptor)
 
-            with patch(path_to_patch, Mock(side_effect=Exception)):
-                self.assertIsInstance(self.store.get_course(course_key), ErrorDescriptor)
+            # get courses through iterating all courses
+            courses_list, __ = _accessible_courses_list(self.request)
+            self.assertEqual(courses_list, [])
 
-                # get courses through iterating all courses
-                courses_list, __ = _accessible_courses_list(self.request)
-                self.assertEqual(courses_list, [])
+            # get courses by reversing group name formats
+            courses_list_by_groups, __ = _accessible_courses_list_from_groups(self.request)
+            self.assertEqual(courses_list_by_groups, [])
+            self.assertEqual(courses_list, courses_list_by_groups)
 
-                # get courses by reversing group name formats
-                courses_list_by_groups, __ = _accessible_courses_list_from_groups(self.request)
-                self.assertEqual(courses_list_by_groups, [])
-                self.assertEqual(courses_list, courses_list_by_groups)
-
-    @ddt.data(ModuleStoreEnum.Type.split, ModuleStoreEnum.Type.mongo)
-    def test_get_course_list_with_invalid_course_location(self, store):
+    def test_get_course_list_with_invalid_course_location(self):
         """
         Test getting courses with invalid course location (course deleted from modulestore).
         """
-        with self.store.default_store(store):
-            course_key = self.store.make_course_key('Org', 'Course', 'Run')
-            self._create_course_with_access_groups(course_key, self.user, store)
+        course_key = self.store.make_course_key('Org', 'Course', 'Run')
+        self._create_course_with_access_groups(course_key, self.user)
 
         # get courses through iterating all courses
         courses_list, __ = _accessible_courses_list(self.request)
         self.assertEqual(len(courses_list), 1)
 
-        courses_summary_list, __ = _accessible_courses_summary_list(self.request)
-
-        # Verify fetched accessible courses list is a list of CourseSummery instances and only one course
-        # is returned
-        self.assertTrue(all(isinstance(course, CourseSummary) for course in courses_summary_list))
-        self.assertEqual(len(courses_summary_list), 1)
-
         # get courses by reversing group name formats
         courses_list_by_groups, __ = _accessible_courses_list_from_groups(self.request)
         self.assertEqual(len(courses_list_by_groups), 1)
-
-        # check course lists have same courses
+        # check both course lists have same courses
         self.assertEqual(courses_list, courses_list_by_groups)
 
         # now delete this course and re-add user to instructor group of this course
@@ -212,27 +151,11 @@ class TestCourseListing(ModuleStoreTestCase):
 
         CourseInstructorRole(course_key).add_users(self.user)
 
-        # Get courses through iterating all courses
+        # test that get courses through iterating all courses now returns no course
         courses_list, __ = _accessible_courses_list(self.request)
+        self.assertEqual(len(courses_list), 0)
 
-        # Get course summaries by iterating all courses
-        courses_summary_list, __ = _accessible_courses_summary_list(self.request)
-
-        # Get courses by reversing group name formats
-        courses_list_by_groups, __ = _accessible_courses_list_from_groups(self.request)
-
-        # Test that course list returns no course
-        self.assertEqual(
-            [len(courses_list), len(courses_list_by_groups), len(courses_summary_list)],
-            [0, 0, 0]
-        )
-
-    @ddt.data(
-        (ModuleStoreEnum.Type.split, 150, 505),
-        (ModuleStoreEnum.Type.mongo, USER_COURSES_COUNT, 3)
-    )
-    @ddt.unpack
-    def test_course_listing_performance(self, store, courses_list_from_group_calls, courses_list_calls):
+    def test_course_listing_performance(self):
         """
         Create large number of courses and give access of some of these courses to the user and
         compare the time to fetch accessible courses for the user through traversing all courses and
@@ -242,16 +165,15 @@ class TestCourseListing(ModuleStoreTestCase):
         user_course_ids = random.sample(range(TOTAL_COURSES_COUNT), USER_COURSES_COUNT)
 
         # create courses and assign those to the user which have their number in user_course_ids
-        with self.store.default_store(store):
-            for number in range(TOTAL_COURSES_COUNT):
-                org = 'Org{0}'.format(number)
-                course = 'Course{0}'.format(number)
-                run = 'Run{0}'.format(number)
-                course_location = self.store.make_course_key(org, course, run)
-                if number in user_course_ids:
-                    self._create_course_with_access_groups(course_location, self.user, store=store)
-                else:
-                    self._create_course_with_access_groups(course_location, store=store)
+        for number in range(TOTAL_COURSES_COUNT):
+            org = 'Org{0}'.format(number)
+            course = 'Course{0}'.format(number)
+            run = 'Run{0}'.format(number)
+            course_location = self.store.make_course_key(org, course, run)
+            if number in user_course_ids:
+                self._create_course_with_access_groups(course_location, self.user)
+            else:
+                self._create_course_with_access_groups(course_location)
 
         # time the get courses by iterating through all courses
         with Timer() as iteration_over_courses_time_1:
@@ -279,29 +201,29 @@ class TestCourseListing(ModuleStoreTestCase):
         self.assertGreaterEqual(iteration_over_courses_time_2.elapsed, iteration_over_groups_time_2.elapsed)
 
         # Now count the db queries
-        with check_mongo_calls(courses_list_from_group_calls):
+        with check_mongo_calls(USER_COURSES_COUNT):
             _accessible_courses_list_from_groups(self.request)
 
-        with check_mongo_calls(courses_list_calls):
-            _accessible_courses_list(self.request)
         # Calls:
         #    1) query old mongo
         #    2) get_more on old mongo
         #    3) query split (but no courses so no fetching of data)
+        with check_mongo_calls(3):
+            _accessible_courses_list(self.request)
 
-    @ddt.data(ModuleStoreEnum.Type.split, ModuleStoreEnum.Type.mongo)
-    def test_course_listing_errored_deleted_courses(self, store):
+    def test_course_listing_errored_deleted_courses(self):
         """
         Create good courses, courses that won't load, and deleted courses which still have
         roles. Test course listing.
         """
-        with self.store.default_store(store):
-            course_location = self.store.make_course_key('testOrg', 'testCourse', 'RunBabyRun')
-            self._create_course_with_access_groups(course_location, self.user, store)
+        store = modulestore()._get_modulestore_by_type(ModuleStoreEnum.Type.mongo)
 
-            course_location = self.store.make_course_key('testOrg', 'doomedCourse', 'RunBabyRun')
-            self._create_course_with_access_groups(course_location, self.user, store)
-            self.store.delete_course(course_location, self.user.id)  # pylint: disable=no-member
+        course_location = self.store.make_course_key('testOrg', 'testCourse', 'RunBabyRun')
+        self._create_course_with_access_groups(course_location, self.user)
+
+        course_location = self.store.make_course_key('testOrg', 'doomedCourse', 'RunBabyRun')
+        self._create_course_with_access_groups(course_location, self.user)
+        store.delete_course(course_location, self.user.id)
 
         courses_list, __ = _accessible_courses_list_from_groups(self.request)
         self.assertEqual(len(courses_list), 1, courses_list)
@@ -319,7 +241,7 @@ class TestCourseListing(ModuleStoreTestCase):
             run=org_course_one.run
         )
 
-        org_course_two = self.store.make_course_key('AwesomeOrg', 'Course2', 'RunBabyRun')
+        org_course_two = self.store.make_course_key('AwesomeOrg', 'Course2', 'RunRunRun')
         CourseFactory.create(
             org=org_course_two.org,
             number=org_course_two.course,
@@ -331,12 +253,8 @@ class TestCourseListing(ModuleStoreTestCase):
 
         with self.assertRaises(AccessListFallback):
             _accessible_courses_list_from_groups(self.request)
-        courses_list, __ = get_courses_accessible_to_user(self.request)
-
-        # Verify fetched accessible courses list is a list of CourseSummery instances and test expacted
-        # course count is returned
+        courses_list, __ = _accessible_courses_list(self.request)
         self.assertEqual(len(courses_list), 2)
-        self.assertTrue(all(isinstance(course, CourseSummary) for course in courses_list))
 
     def test_course_listing_with_actions_in_progress(self):
         sourse_course_key = CourseLocator('source-Org', 'source-Course', 'source-Run')

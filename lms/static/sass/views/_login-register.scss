@@ -6,13 +6,18 @@
 $sm-btn-google: #dd4b39;
 $sm-btn-facebook: #3b5998;
 $sm-btn-linkedin: #0077b5;
+$sm-btn-google-plus: #dd4b39;
+$sm-btn-naver: #56c82c;
+$sm-btn-kakao: #ffeb01;
+$sm-btn-lifelongedu: #00759e;
 
 .login-register {
     @include box-sizing(border-box);
     @include outer-container;
     $grid-columns: 12;
-    background: $white;
+    background: $body_bg;
     min-height: 100%;
+    margin-bottom:30px;
     width: 100%;
     $third-party-button-height: ($baseline*1.75);
 
@@ -21,7 +26,7 @@ $sm-btn-linkedin: #0077b5;
         margin: 0;
         letter-spacing: normal;
         font-family: $sans-serif;
-    }
+    }throvpdl
 
     .instructions {
         @extend %t-copy-base;
@@ -103,6 +108,7 @@ $sm-btn-linkedin: #0077b5;
                 z-index: 6;
                 padding: 0 $baseline;
                 background: $white;
+		font-weight:inherit;
             }
         }
 
@@ -119,6 +125,8 @@ $sm-btn-linkedin: #0077b5;
         text-transform: none;
         text-shadow: none;
         letter-spacing: normal;
+	padding:5px 20px;
+	box-sizing:border-box;
     }
 
     .nav-btn {
@@ -130,13 +138,10 @@ $sm-btn-linkedin: #0077b5;
     .toggle-form {
         @include box-sizing(border-box);
         max-width: 650px;
-        min-width: 250px;
+        min-width: 275px;
         margin: 0 auto;
-        padding: {
-            left: $baseline; // Don't want to override any top or bottom (CR)
-            right: $baseline; // Don't want to override any top or bottom (CR)
-            bottom: ($baseline/2);
-        }
+        padding-left: $baseline; // Don't want to override any top or bottom (CR)
+        padding-right: $baseline // Don't want to override any top or bottom (CR)
     }
 
     .toggle-form {
@@ -150,6 +155,7 @@ $sm-btn-linkedin: #0077b5;
         color: $m-gray-l1;
         text-align: center;
     }
+
 
     /** The forms **/
     .form-wrapper {
@@ -167,6 +173,7 @@ $sm-btn-linkedin: #0077b5;
 
     .login-form {
         margin-bottom: $baseline;
+	background:$white;
 
         &:focus {
             outline: none;
@@ -317,6 +324,9 @@ $sm-btn-linkedin: #0077b5;
 
         select {
             width: 100%;
+	    height:32px;
+	    border:solid 1px #c8c8c8;
+	    box-shadow:0px 0px 3px 0px rgba(0, 0, 0, 0.1) inset;
 
             &.error {
                 border-color: tint($red,50%);
@@ -393,7 +403,7 @@ $sm-btn-linkedin: #0077b5;
 
         &:hover,
         &:focus {
-            background-image: none;
+            background: $m-blue-d3;
 
             .icon {
                 top: 0;
@@ -431,12 +441,12 @@ $sm-btn-linkedin: #0077b5;
             &:hover,
             &:focus {
                 background-color: $sm-btn-facebook;
-                border: 1px solid #263A62;
+                border: 1px solid #bbbbbb;
                 color: white;
             }
 
             &:hover {
-                box-shadow: 0 2px 1px 0 #30487C;
+                box-shadow: 0 2px 1px 0 #c8c8c8;
             }
         }
 
@@ -450,7 +460,7 @@ $sm-btn-linkedin: #0077b5;
             &:hover,
             &:focus {
                 background-color: $sm-btn-linkedin;
-                border: 1px solid #06527D;
+                border: 1px solid #bbbbbb;
                 color: white;
             }
 
@@ -458,7 +468,81 @@ $sm-btn-linkedin: #0077b5;
                 box-shadow: 0 2px 1px 0 #005D8E;
             }
         }
+        &.button-oa2-google-plus {
+            color: $sm-btn-google-plus;
 
+            .icon {
+                background: $sm-btn-google-plus;
+            }
+
+            &:hover,
+            &:focus {
+                background-color: $sm-btn-google-plus;
+                border: 1px solid #bbbbbb;
+                color: white;
+            }
+
+            &:hover {
+                box-shadow: 0 2px 1px 0 #c8c8c8;
+            }
+        }
+
+        &.button-oa2-naver {
+            color: $sm-btn-naver;
+
+            .icon {
+                background: $sm-btn-naver;
+            }
+
+            &:hover,
+            &:focus {
+                background-color: $sm-btn-naver;
+                border: 1px solid #bbbbbb;
+                color: white;
+            }
+
+            &:hover {
+                box-shadow: 0 2px 1px 0 #c8c8c8;
+            }
+        }
+
+        &.button-oa2-kakao {
+            color: #3b1e1e;
+
+            .icon {
+                background: #3b1e1e;
+            }
+
+            &:hover,
+            &:focus {
+                background-color: $sm-btn-kakao;
+                border: 1px solid #bbbbbb;
+                color: #3b1e1e;
+            }
+
+            &:hover {
+                box-shadow: 0 2px 1px 0 #c8c8c8;
+            }
+        }
+
+        &.button-oa2-lifelongedu {
+            color: $sm-btn-lifelongedu;
+
+            .icon {
+                background: $sm-btn-lifelongedu;
+            }
+
+            &:hover,
+            &:focus {
+                background-color: $sm-btn-lifelongedu;
+                border: 1px solid #bbbbbb;
+                color: white;
+            }
+
+            &:hover {
+                box-shadow: 0 2px 1px 0 #c8c8c8;
+            }
+        }
     }
 
     .button-secondary-login {

@@ -80,15 +80,6 @@ class FieldsMixin(object):
         query = self.q(css='.u-field-{} .u-field-message'.format(field_id))
         return query.text[0] if query.present else None
 
-    def message_for_textarea_field(self, field_id):
-        """
-        Return the current message for textarea field.
-        """
-        self.wait_for_field(field_id)
-
-        query = self.q(css='.u-field-{} .u-field-message-help'.format(field_id))
-        return query.text[0] if query.present else None
-
     def wait_for_message(self, field_id, message):
         """
         Wait for a message to appear in a field.
@@ -143,13 +134,9 @@ class FieldsMixin(object):
         """
         self.wait_for_field(field_id)
 
-        query = self.q(css='.u-field-{} .u-field-value'.format(field_id))
-        if not query.present:
-            return None
+        return self.value_for_text_field(field_id)
 
-        return query.text[0]
-
-    def value_for_text_field(self, field_id, value=None, press_enter=True):
+    def value_for_text_field(self, field_id, value=None):
         """
         Get or set the value of a text field.
         """
@@ -163,30 +150,35 @@ class FieldsMixin(object):
             current_value = query.attrs('value')[0]
             query.results[0].send_keys(u'\ue003' * len(current_value))  # Delete existing value.
             query.results[0].send_keys(value)  # Input new value
-            if press_enter:
-                query.results[0].send_keys(u'\ue007')  # Press Enter
+            query.results[0].send_keys(u'\ue007')  # Press Enter
         return query.attrs('value')[0]
 
-    def set_value_for_textarea_field(self, field_id, value):
+    def value_for_textarea_field(self, field_id, value=None):
         """
-        Set the value of a textarea field.
+        Get or set the value of a textarea field.
         """
         self.wait_for_field(field_id)
+
         self.make_field_editable(field_id)
 
-        field_selector = '.u-field-{} textarea'.format(field_id)
-        self.wait_for_element_presence(field_selector, 'Editable textarea is present.')
+        query = self.q(css='.u-field-{} textarea'.format(field_id))
+        if not query.present:
+            return None
 
-        query = self.q(css=field_selector)
-        query.fill(value)
-        query.results[0].send_keys(u'\ue007')  # Press Enter
+        if value is not None:
+            query.fill(value)
+            query.results[0].send_keys(u'\ue004')  # Focus Out using TAB
+
+        if self.mode_for_field(field_id) == 'edit':
+            return query.text[0]
+        else:
+            return self.get_non_editable_mode_value(field_id)
 
     def get_non_editable_mode_value(self, field_id):
         """
         Return value of field in `display` or `placeholder` mode.
         """
         self.wait_for_field(field_id)
-        self.wait_for_ajax()
 
         return self.q(css='.u-field-{} .u-field-value .u-field-value-readonly'.format(field_id)).text[0]
 
@@ -237,10 +229,3 @@ class FieldsMixin(object):
         query = self.q(css='.u-field-{} a'.format(field_id))
         if query.present:
             query.first.click()
-
-    def error_for_field(self, field_id):
-        """
-        Returns bool based on the highlighted border for field.
-        """
-        query = self.q(css='.u-field-{}.error'.format(field_id))
-        return True if query.present else False

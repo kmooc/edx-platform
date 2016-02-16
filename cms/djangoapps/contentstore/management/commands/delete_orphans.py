@@ -11,29 +11,32 @@ class Command(BaseCommand):
     help = '''
     Delete orphans from a MongoDB backed course. Takes two arguments:
     <course_id>: the course id of the course whose orphans you want to delete
-    |--commit|: optional argument. If not provided, will dry run delete
+    |commit|: optional argument. If not provided, will not run task.
     '''
 
-    def add_arguments(self, parser):
-        parser.add_argument('course_id')
-        parser.add_argument('--commit', action='store_true', help='Commit to deleting the orphans')
-
     def handle(self, *args, **options):
+        if len(args) not in {1, 2}:
+            raise CommandError("delete_orphans requires one or more arguments: <course_id> |commit|")
+
         try:
-            course_key = CourseKey.from_string(options['course_id'])
+            course_key = CourseKey.from_string(args[0])
         except InvalidKeyError:
             raise CommandError("Invalid course key.")
 
-        if options['commit']:
+        commit = False
+        if len(args) == 2:
+            commit = args[1] == 'commit'
+
+        if commit:
             print 'Deleting orphans from the course:'
             deleted_items = _delete_orphans(
-                course_key, ModuleStoreEnum.UserID.mgmt_command, options['commit']
+                course_key, ModuleStoreEnum.UserID.mgmt_command, commit
             )
             print "Success! Deleted the following orphans from the course:"
             print "\n".join(deleted_items)
         else:
             print 'Dry run. The following orphans would have been deleted from the course:'
             deleted_items = _delete_orphans(
-                course_key, ModuleStoreEnum.UserID.mgmt_command, options['commit']
+                course_key, ModuleStoreEnum.UserID.mgmt_command, commit
             )
             print "\n".join(deleted_items)

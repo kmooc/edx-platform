@@ -90,9 +90,8 @@ Test Locations
       ``common/djangoapps/terrain``
    -  Lettuce Tests: located in ``features`` subpackage within a Django
       app. For example: ``lms/djangoapps/courseware/features``
-   -  Bok Choy Acceptance Tests: located under ``common/test/acceptance/tests``
-   -  Bok Choy Accessibility Tests: located under ``common/test/acceptance/tests`` and tagged with ``@attr("a11y")``
-   -  Bok Choy PageObjects: located under ``common/test/acceptance/pages``
+   -  Bok Choy Tests: Artifacts are located under
+      ``common/test/acceptance``
 
 Factories
 ---------
@@ -112,7 +111,7 @@ example, the factory for creating problem XML definitions is located in
 Running Tests
 =============
 
-You can run all of the unit-level tests using this command.
+You can run all of the unit-level tests using the command
 
 ::
 
@@ -121,8 +120,8 @@ You can run all of the unit-level tests using this command.
 This includes python, javascript, and documentation tests. It does not,
 however, run any acceptance tests.
 
-Note -
-`paver` is a scripting tool. To get information about various options, you can run the this command.
+Note - 
+`paver` is a scripting tool. To get information about various options, you can run the following command -
 ::
 	paver -h
 Running Python Unit tests
@@ -132,50 +131,44 @@ We use `nose <https://nose.readthedocs.org/en/latest/>`__ through the
 `django-nose plugin <https://pypi.python.org/pypi/django-nose>`__ to run
 the test suite.
 
-For example, this command runs all the python test scripts.
+You can run all the python tests using ``paver`` commands. For example,
 
 ::
 
     paver test_python
 
-It also runs ``collectstatic``, which prepares the
-static files used by the site (for example, compiling CoffeeScript to
-JavaScript).
+runs all the tests. It also runs ``collectstatic``, which prepares the
+static files used by the site (for example, compiling Coffeescript to
+Javascript).
 
-You can re-run all failed python tests by running this command (see note at end of
-section).
+You can re-run all failed python tests by running: (see note at end of
+section)
 
 ::
 
     paver test_python --failed
 
-To test lms python tests use this command.
-
-::
+To test lms or cms python, use::
 
     paver test_system -s lms
 
-To test cms python tests use this command.
+or
 
 ::
 
     paver test_system -s cms
 
-To run these tests without ``collectstatic``, which is faster, append the following argument.
-
-::
+You can also run these tests without ``collectstatic``, which is faster::
 
     paver test_system -s lms --fasttest
 
-To run cms python tests without ``collectstatic`` use this command.
+or
 
 ::
 
     paver test_system -s cms --fasttest
 
-To run a single django test class use this command.
-
-::
+To run a single django test class::
 
     paver test_system -t lms/djangoapps/courseware/tests/tests.py:ActivateLoginTest
 
@@ -183,21 +176,16 @@ When developing tests, it is often helpful to be able to really just run
 one single test without the overhead of PIP installs, UX builds, etc. In
 this case, it is helpful to look at the output of paver, and run just
 the specific command (optionally, stripping away coverage metrics). At
-the time of this writing, the command is the following.
-
-::
+the time of this writing, the command is::
 
     python ./manage.py lms test --verbosity=1 lms/djangoapps/courseware/tests/test_courses.py   --traceback --settings=test
 
-
-To run a single test format the command like this.
-
-::
+To run a single django test::
 
     paver test_system -t lms/djangoapps/courseware/tests/tests.py:ActivateLoginTest.test_activate_login
 
 To re-run all failing django tests from lms or cms, use the
-``--failed``,\ ``-f`` flag (see note at end of section).
+``--failed``,\ ``-f`` flag (see note at end of section)
 
 ::
 
@@ -208,75 +196,55 @@ There is also a ``--fail_fast``, ``-x`` option that will stop nosetests
 after the first failure.
 
 common/lib tests are tested with the ``test_lib`` task, which also
-accepts the ``--failed`` and ``--fail_fast`` options.
-
-::
+accepts the ``--failed`` and ``--fail_fast`` options. For example::
 
     paver test_lib -l common/lib/calc
-    paver test_lib -l common/lib/xmodule --failed
 
-For example, this command runs a single nose test file.
+or
 
 ::
+
+    paver test_lib -l common/lib/xmodule --failed
+
+To run a single nose test file::
 
     nosetests common/lib/xmodule/xmodule/tests/test_stringify.py
 
-This command runs a single nose test within a specified file.
-
-::
+To run a single nose test::
 
     nosetests common/lib/xmodule/xmodule/tests/test_stringify.py:test_stringify
 
-
-This is an example of how to run a single test and get stdout, with proper env config.
-
-::
+To run a single test and get stdout, with proper env config::
 
     python manage.py cms --settings test test contentstore.tests.test_import_nostatic -s
 
-These are examples of how to run a single test and get stdout and get coverage.
+To run a single test and get stdout and get coverage::
 
-::
+    python -m coverage run --rcfile=./common/lib/xmodule/.coveragerc which ./manage.py cms --settings test test --traceback --logging-clear-handlers --liveserver=localhost:8000-9000 contentstore.tests.test_import_nostatic -s # cms example
+    python -m coverage run --rcfile=./lms/.coveragerc which ./manage.py lms --settings test test --traceback --logging-clear-handlers --liveserver=localhost:8000-9000  courseware.tests.test_module_render -s # lms example
 
-    python -m coverage run which ./manage.py cms --settings test test --traceback --logging-clear-handlers --liveserver=localhost:8000-9000 contentstore.tests.test_import_nostatic -s # cms example
-    python -m coverage run which ./manage.py lms --settings test test --traceback --logging-clear-handlers --liveserver=localhost:8000-9000  courseware.tests.test_module_render -s # lms example
+generate coverage report::
 
-Use this command to generate coverage report.
+    coverage report --rcfile=./common/lib/xmodule/.coveragerc
 
-::
+or to get html report::
 
-    coverage report
+    coverage html --rcfile=./common/lib/xmodule/.coveragerc
 
-Use this command to generate an HTML report.
-
-::
-
-    coverage html
-
-The report is then saved in reports/common/lib/xmodule/cover/index.html
+then browse reports/common/lib/xmodule/cover/index.html
 
 To run tests for stub servers, for example for `YouTube stub
 server <https://github.com/edx/edx-platform/blob/master/common/djangoapps/terrain/stubs/tests/test_youtube_stub.py>`__,
-you can run one of these commands.
-
-::
+you can do one of::
 
     paver test_system -s cms -t common/djangoapps/terrain/stubs/tests/test_youtube_stub.py
-    python -m coverage run `which ./manage.py` cms --settings test test --traceback common/djangoapps/terrain/stubs/tests/test_youtube_stub.py
+    python -m coverage run --rcfile=cms/.coveragerc `which ./manage.py` cms --settings test test --traceback common/djangoapps/terrain/stubs/tests/test_youtube_stub.py
 
 Very handy: if you pass the ``--pdb`` flag to a paver test function, or
 uncomment the ``pdb=1`` line in ``setup.cfg``, the test runner
 will drop you into pdb on error. This lets you go up and down the stack
 and see what the values of the variables are. Check out `the pdb
 documentation <http://docs.python.org/library/pdb.html>`__
-
-Use this command to put a temporary debugging breakpoint in a test.
-If you check this in, your tests will hang on jenkins.
-
-::
-
-    from nose.tools import set_trace; set_trace()
-
 
 Note: More on the ``--failed`` functionality
 
@@ -302,9 +270,7 @@ tests::
     paver test_js
 
 To run a specific set of JavaScript tests and print the results to the
-console, run these commands.
-
-::
+console::
 
     paver test_js_run -s lms
     paver test_js_run -s lms-coffee
@@ -312,11 +278,8 @@ console, run these commands.
     paver test_js_run -s cms-squire
     paver test_js_run -s xmodule
     paver test_js_run -s common
-    paver test_js_run -s common-requirejs
 
-To run JavaScript tests in a browser, run these commands.
-
-::
+To run JavaScript tests in your default browser::
 
     paver test_js_dev -s lms
     paver test_js_dev -s lms-coffee
@@ -324,18 +287,6 @@ To run JavaScript tests in a browser, run these commands.
     paver test_js_dev -s cms-squire
     paver test_js_dev -s xmodule
     paver test_js_dev -s common
-    paver test_js_dev -s common-requirejs
-
-To debug these tests on devstack in a local browser:
-
- * first run the appropriate test_js_dev command from above which will open a browser using XQuartz
- * open the same URL in your browser but change the IP address to 192.168.33.10, e.g.
-    http://192.168.33.10:TEST_PORT/suite/cms
- * this will run all the tests and show you the results including details of any failures
- * you can click on an individually failing test and/or suite to re-run it by itself
- * you can now use the browser's developer tools to debug as you would any other JavaScript code
-
-Note: the port is also output to the console that you ran the tests from if you find that easier.
 
 These paver commands call through to a custom test runner. For more
 info, see `js-test-tool <https://github.com/edx/js-test-tool>`__.
@@ -366,59 +317,42 @@ supported development enviornment for the edX Platform.
 
 * mySQL
 
-To run all the bok choy acceptance tests run this command.
-
-::
+To run all the bok choy acceptance tests::
 
     paver test_bokchoy
 
 Once the database has been set up and the static files collected, you
 can use the 'fast' option to skip those tasks. This option can also be
-used with any of the test specs below.
-
-::
+used with any of the test specs below::
 
     paver test_bokchoy --fasttest
 
-For example to run a single test, specify the name of the test file.
-
-::
+To run a single test, specify the name of the test file. For example::
 
     paver test_bokchoy -t lms/test_lms.py
 
 Notice the test file location is relative to
-common/test/acceptance/tests. This is another example.
-
-::
+common/test/acceptance/tests. For example::
 
     paver test_bokchoy -t studio/test_studio_bad_data.py
 
-To run a single test faster by not repeating setup tasks us the ``--fasttest`` option.
-
-::
+To run a single test faster by not repeating setup tasks::
 
     paver test_bokchoy -t studio/test_studio_bad_data.py --fasttest
 
-To test only a certain feature, specify the file and the testcase class.
-
-::
+To test only a certain feature, specify the file and the testcase class::
 
     paver test_bokchoy -t studio/test_studio_bad_data.py:BadComponentTest
 
 To execute only a certain test case, specify the file name, class, and
-test case method.
-
-::
+test case method::
 
     paver test_bokchoy -t lms/test_lms.py:RegistrationTest.test_register
 
 During acceptance test execution, log files and also screenshots of
 failed tests are captured in test\_root/log.
 
-Use this command to put a temporary debugging breakpoint in a test.
-If you check this in, your tests will hang on jenkins.
-
-::
+To put a debugging breakpoint in a test use::
 
     from nose.tools import set_trace; set_trace()
 
@@ -426,113 +360,10 @@ By default, all bokchoy tests are run with the 'split' ModuleStore. To
 override the modulestore that is used, use the default\_store option.
 The currently supported stores are: 'split'
 (xmodule.modulestore.split\_mongo.split\_draft.DraftVersioningModuleStore)
-and 'draft' (xmodule.modulestore.mongo.DraftMongoModuleStore). This is an example
-for the 'draft' store.
-
-::
+and 'draft' (xmodule.modulestore.mongo.DraftMongoModuleStore). For
+example::
 
     paver test_bokchoy --default_store='draft'
-
-Running Bok Choy Accessibility Tests
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-We use Bok
-Choy for `automated accessibility testing
-<http://bok-choy.readthedocs.org/en/latest/accessibility.html>`__.
-Bok Choy, a UI-level acceptance test framework for writing robust
-`Selenium <http://docs.seleniumhq.org/>`__
-tests in `Python <https://www.python.org/>`__, includes the ability to perform
-accessibility audits on web pages using `Google Accessibility Developer Tools
-<https://github.com/GoogleChrome/accessibility-developer-tools/>`__ or
-`Deque's aXe Core <https://github.com/dequelabs/axe-core/>`__.
-For more details about how to write accessibility tests, please read
-the `Bok Choy documentation <http://bok-choy.readthedocs.org/en/latest/accessibility.html>`__
-and the Automated Accessibility Tests `openedx Confluence page
-<https://openedx.atlassian.net/wiki/display/TE/Automated+Accessibility+Tests>`__.
-
-**Prerequisites**:
-
-These prerequisites are all automatically installed and available in `Devstack
-<https://github.com/edx/configuration/wiki/edX-Developer-Stack>`__ (since the Cypress release), the supported development enviornment for the edX Platform.
-
-* Mongo
-
-* Memcache
-
-* mySQL
-
-To run all the bok choy accessibility tests use this command.
-
-::
-
-    paver test_a11y
-
-To run specific tests, use the ``-t`` flag to specify a nose-style test spec
-relative to the ``common/test/acceptance/tests`` directory. This is an example for it.
-
-::
-
-    paver test_a11y -t test_lms_dashboard.py:LmsDashboardA11yTest.test_dashboard_course_listings_a11y
-
-**Coverage**:
-
-To generate the coverage report for the views run during accessibility tests::
-
-    paver a11y_coverage
-
-Note that this coverage report is just a guideline to find areas that
-are missing tests.  If the view isn't 'covered', there definitely
-isn't a test for it.  If it is 'covered', we are loading that page
-during the tests but not necessarily calling ``page.a11y_audit.check_for_accessibility_errors`` on it.
-
-
-Options for Faster Development Cycles in Bok-Choy Tests
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The following are ways in which a developer could shorten the development
-cycle for faster feedback. The options below can often be used together.
-
-**Multiprocessing Mode**
-
-Bok-choy tests can be threaded using the `-n` switch.  Using 2 threads generally
-reduces test cycles by 33%.  The recommendation is to make sure the
-number of threads is no more than the number of processors available. For
-example, the Cypress release of devstack is provisioned by default with 2
-processors. In that case, to run tests in multiprocess mode::
-
-    paver test_bokchoy -n 2
-
-*Caveat*: Not all tests have been designed with multiprocessing in mind; some
-testcases (approx 10%) will fail in multiprocess mode for various reasons
-(e.g., shared fixtures, unexpected state, etc). If you have tests that fail
-in multiprocessing mode, it may be worthwhile to run them in single-stream mode
-to understand if you are encountering such a failure. With that noted, this
-can speed development for most test classes.
-
-**Leave Your Servers Running**
-
-There are two additional switches available in the `paver test_bokchoy` task.
-Used together, they can shorten the cycle between test runs. Similar to above,
-there are a handful of tests that won't work with this approach, due to insufficient
-teardown and other unmanaged state.
-
-1. Start your servers in one terminal/ssh session::
-
-    paver test_bokchoy --serversonly
-
-Note if setup has already been done, you can run::
-
-    paver test_bokchoy --serversonly --fasttest
-
-2. Run your tests only in another terminal/ssh session::
-
-    paver test_bokchoy --testsonly --fasttest
-
-You must run BOTH `--testsonly` and `--fasttest`.
-
-3. When done, you can kill your servers in the first terminal/ssh session with
-Control-C. *Warning*: Only hit Control-C one time so the nose test framework can
-properly clean up.
 
 Running Lettuce Acceptance Tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -549,34 +380,26 @@ installed to run the tests in Chrome. The tests are confirmed to run
 with Chrome (not Chromium) version 34.0.1847.116 with ChromeDriver
 version 2.6.232917.
 
-To run all the acceptance tests, run this command.
-
-::
+To run all the acceptance tests::
 
     paver test_acceptance
 
-To run only for lms or cms, run one of these commands.
-
-::
+To run only for lms or cms::
 
     paver test_acceptance -s lms
     paver test_acceptance -s cms
 
-For example, this command tests only a specific feature.
-
-::
+To test only a specific feature::
 
     paver test_acceptance -s lms --extra_args="lms/djangoapps/courseware/features/problems.feature"
 
-A command like this tests only a specific scenario.
+To test only a specific scenario
 
 ::
 
     paver test_acceptance -s lms --extra_args="lms/djangoapps/courseware/features/problems.feature -s 3"
 
-To start the debugger on failure, pass the ``--pdb`` option to the paver command like this.
-
-::
+To start the debugger on failure, pass the ``--pdb`` option to the paver command::
 
     paver test_acceptance -s lms --pdb --extra_args="lms/djangoapps/courseware/features/problems.feature"
 
@@ -632,21 +455,24 @@ according to the template string
 ``{scenario_number}__{step_number}__{step_function_name}__{"1_before"|"2_after"}``.
 
 If you don't want to have screenshots be captured for all steps, but
-rather want fine grained control, you can use this decorator before any Python function in ``feature_name.py`` file.
+rather want fine grained control, you can use the decorator
 
 ::
 
     @capture_screenshot_before_after
 
-The decorator will capture two screenshots: one before the decorated function runs,
-and one after. Also, this function is available, and can be inserted at any point in code to capture a
-screenshot specifically in that place.
+before any Python function in ``feature_name.py`` file. The decorator
+will capture two screenshots - one before the decorated function runs,
+and one after. Also, the function
 
 ::
 
     from lettuce import world; world.capture_screenshot("image_name")
 
-In both cases the captured screenshots will go to the same folder as when using the step method: ``{TEST_ROOT}/log/auto_screenshot``.
+is available, and can be inserted at any point in code to capture a
+screenshot specifically in that place. In both cases the captured
+screenshots will go to the same folder as when using the step method -
+``{TEST_ROOT}/log/auto_screenshot``.
 
 A totally different approach to visually seeing acceptance tests run in
 Vagrant is to redirect Vagrant X11 session to your local machine. Please
@@ -661,15 +487,11 @@ unit/integration tests.
 
 To view test coverage:
 
-1. Run the test suite with this command.
-
-::
+1. Run the test suite::
 
        paver test
 
-2. Generate reports with this command.
-
-::
+2. Generate reports::
 
        paver coverage
 
@@ -677,27 +499,21 @@ To view test coverage:
    HTML and XML (Cobertura format) reports.
 
 Python Code Style Quality
--------------------------
+------------------
 
-To view Python code style quality (including pep8 and pylint violations) run this command.
-
-::
+To view Python code style quality (including pep8 and pylint violations)::
 
     paver run_quality
 
 More specific options are below.
 
--  These commands run a particular quality report.
-
-::
+-  Running a particular quality report::
 
        paver run_pep8
        paver run_pylint
 
--  This command runs a report, and sets it to fail if it exceeds a given number
-   of violations.
-
-::
+-  Running a report, and setting it to fail if it exceeds a given number
+   of violations::
 
        paver run_pep8 --limit=800
 
@@ -707,58 +523,29 @@ More specific options are below.
    that, the command can be set to fail if a certain diff threshold is
    not met. For example, to cause the process to fail if quality
    expectations are less than 100% when compared to master (or in other
-   words, if style quality is worse than what is already on master).
-
-::
+   words, if style quality is worse than what's already on master)::
 
        paver run_quality --percentage=100
 
 -  Note that 'fixme' violations are not counted with run\_quality. To
-   see all 'TODO' lines, use this command.
-
-::
+   see all 'TODO' lines, use::
 
        paver find_fixme --system=lms
 
    ``system`` is an optional argument here. It defaults to
    ``cms,lms,common``.
-
+   
 
 JavaScript Code Style Quality
 ------------------
 
-To view JavaScript code style quality run this command.
-
-::
+To view JavaScript code style quality::
 
     paver run_jshint
-
--  This command also comes with a ``--limit`` switch, this is an example of that switch.
-
-::
+    
+-  This command also comes with a ``--limit`` switch, for example::
 
 	paver run_jshint --limit=700
-
-
-
-Code Complexity Tools
-----------------------
-
-Two tools are available for evaluating complexity of edx-platform code:
-
-- `radon <https://radon.readthedocs.org/en/latest/>`__ for Python code complexity.
-   * To obtain complexity, run
-
-::
-
-       paver run_complexity
-
-- `plato <https://github.com/es-analysis/plato>`__ for JavaScript code complexity. Several options are available on the command line; see documentation.
-    * Below, the following command will produce an html report in a subdirectory called "jscomplexity"
-
-::
-
-       plato -q -x common/static/js/vendor/ -t common -l .jshintrc -r -d jscomplexity common/static/js/
 
 
 
@@ -821,3 +608,4 @@ Acceptance Test Techniques
    and "LMS" when they follow this convention: name your feature in the
    .feature file CMS or LMS with a single period and then no other
    periods in the name. The name can contain spaces. E.g. "CMS.Sign Up"
+

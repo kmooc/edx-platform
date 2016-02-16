@@ -16,7 +16,7 @@ from opaque_keys.edx.locator import CourseLocator
 from xmodule.error_module import ErrorDescriptor
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.django import modulestore
-from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory, check_mongo_calls
 from xmodule.modulestore.xml import CourseLocationManager
 from xmodule.tests import get_test_system
@@ -36,25 +36,9 @@ class CourseViewTestsMixin(object):
     """
     view = None
 
-    raw_grader = [
-        {
-            "min_count": 24,
-            "weight": 0.2,
-            "type": "Homework",
-            "drop_count": 0,
-            "short_label": "HW"
-        },
-        {
-            "min_count": 4,
-            "weight": 0.8,
-            "type": "Exam",
-            "drop_count": 0,
-            "short_label": "Exam"
-        }
-    ]
-
     def setUp(self):
         super(CourseViewTestsMixin, self).setUp()
+        self.create_test_data()
         self.create_user_and_access_token()
 
     def create_user(self):
@@ -65,44 +49,52 @@ class CourseViewTestsMixin(object):
         self.oauth_client = ClientFactory.create()
         self.access_token = AccessTokenFactory.create(user=self.user, client=self.oauth_client).token
 
-    @classmethod
-    def create_course_data(cls):
-        cls.invalid_course_id = 'foo/bar/baz'
-        cls.course = CourseFactory.create(display_name='An Introduction to API Testing', raw_grader=cls.raw_grader)
-        cls.course_id = unicode(cls.course.id)
-        with cls.store.bulk_operations(cls.course.id, emit_signals=False):
-            cls.sequential = ItemFactory.create(
-                category="sequential",
-                parent_location=cls.course.location,
-                display_name="Lesson 1",
-                format="Homework",
-                graded=True
-            )
+    def create_test_data(self):
+        self.invalid_course_id = 'foo/bar/baz'
+        self.course = CourseFactory.create(display_name='An Introduction to API Testing', raw_grader=[
+            {
+                "min_count": 24,
+                "weight": 0.2,
+                "type": "Homework",
+                "drop_count": 0,
+                "short_label": "HW"
+            },
+            {
+                "min_count": 4,
+                "weight": 0.8,
+                "type": "Exam",
+                "drop_count": 0,
+                "short_label": "Exam"
+            }
+        ])
+        self.course_id = unicode(self.course.id)
 
-            factory = MultipleChoiceResponseXMLFactory()
-            args = {'choices': [False, True, False]}
-            problem_xml = factory.build_xml(**args)
-            cls.problem = ItemFactory.create(
-                category="problem",
-                parent_location=cls.sequential.location,
-                display_name="Problem 1",
-                format="Homework",
-                data=problem_xml,
-            )
+        self.sequential = ItemFactory.create(
+            category="sequential",
+            parent_location=self.course.location,
+            display_name="Lesson 1",
+            format="Homework",
+            graded=True
+        )
 
-            cls.video = ItemFactory.create(
-                category="video",
-                parent_location=cls.sequential.location,
-                display_name="Video 1",
-            )
+        factory = MultipleChoiceResponseXMLFactory()
+        args = {'choices': [False, True, False]}
+        problem_xml = factory.build_xml(**args)
+        ItemFactory.create(
+            category="problem",
+            parent_location=self.sequential.location,
+            display_name="Problem 1",
+            format="Homework",
+            data=problem_xml,
+        )
 
-            cls.html = ItemFactory.create(
-                category="html",
-                parent_location=cls.sequential.location,
-                display_name="HTML 1",
-            )
+        self.video = ItemFactory.create(
+            category="video",
+            parent_location=self.sequential.location,
+            display_name="Video 1",
+        )
 
-        cls.empty_course = CourseFactory.create(
+        self.empty_course = CourseFactory.create(
             start=datetime(2014, 6, 16, 14, 30),
             end=datetime(2015, 1, 16),
             org="MTD",
@@ -210,13 +202,8 @@ class CourseDetailTestMixin(object):
         self.assertEqual(response.status_code, 404)
 
 
-class CourseListTests(CourseViewTestsMixin, SharedModuleStoreTestCase):
+class CourseListTests(CourseViewTestsMixin, ModuleStoreTestCase):
     view = 'course_structure_api:v0:list'
-
-    @classmethod
-    def setUpClass(cls):
-        super(CourseListTests, cls).setUpClass()
-        cls.create_course_data()
 
     def test_get(self):
         """
@@ -226,6 +213,7 @@ class CourseListTests(CourseViewTestsMixin, SharedModuleStoreTestCase):
         self.assertEqual(response.status_code, 200)
         data = response.data
         courses = data['results']
+
         self.assertEqual(len(courses), 2)
         self.assertEqual(data['count'], 2)
         self.assertEqual(data['num_pages'], 1)
@@ -305,26 +293,16 @@ class CourseListTests(CourseViewTestsMixin, SharedModuleStoreTestCase):
             self.test_get()
 
 
-class CourseDetailTests(CourseDetailTestMixin, CourseViewTestsMixin, SharedModuleStoreTestCase):
+class CourseDetailTests(CourseDetailTestMixin, CourseViewTestsMixin, ModuleStoreTestCase):
     view = 'course_structure_api:v0:detail'
-
-    @classmethod
-    def setUpClass(cls):
-        super(CourseDetailTests, cls).setUpClass()
-        cls.create_course_data()
 
     def test_get(self):
         response = super(CourseDetailTests, self).test_get()
         self.assertValidResponseCourse(response.data, self.course)
 
 
-class CourseStructureTests(CourseDetailTestMixin, CourseViewTestsMixin, SharedModuleStoreTestCase):
+class CourseStructureTests(CourseDetailTestMixin, CourseViewTestsMixin, ModuleStoreTestCase):
     view = 'course_structure_api:v0:structure'
-
-    @classmethod
-    def setUpClass(cls):
-        super(CourseStructureTests, cls).setUpClass()
-        cls.create_course_data()
 
     def setUp(self):
         super(CourseStructureTests, self).setUp()
@@ -379,13 +357,8 @@ class CourseStructureTests(CourseDetailTestMixin, CourseViewTestsMixin, SharedMo
         self.assertDictEqual(response.data, expected)
 
 
-class CourseGradingPolicyTests(CourseDetailTestMixin, CourseViewTestsMixin, SharedModuleStoreTestCase):
+class CourseGradingPolicyTests(CourseDetailTestMixin, CourseViewTestsMixin, ModuleStoreTestCase):
     view = 'course_structure_api:v0:grading_policy'
-
-    @classmethod
-    def setUpClass(cls):
-        super(CourseGradingPolicyTests, cls).setUpClass()
-        cls.create_course_data()
 
     def test_get(self):
         """
@@ -402,55 +375,6 @@ class CourseGradingPolicyTests(CourseDetailTestMixin, CourseViewTestsMixin, Shar
             },
             {
                 "count": 4,
-                "weight": 0.8,
-                "assignment_type": "Exam",
-                "dropped": 0
-            }
-        ]
-        self.assertListEqual(response.data, expected)
-
-
-class CourseGradingPolicyMissingFieldsTests(CourseDetailTestMixin, CourseViewTestsMixin, SharedModuleStoreTestCase):
-    view = 'course_structure_api:v0:grading_policy'
-
-    # Update the raw grader to have missing keys
-    raw_grader = [
-        {
-            "min_count": 24,
-            "weight": 0.2,
-            "type": "Homework",
-            "drop_count": 0,
-            "short_label": "HW"
-        },
-        {
-            # Deleted "min_count" key
-            "weight": 0.8,
-            "type": "Exam",
-            "drop_count": 0,
-            "short_label": "Exam"
-        }
-    ]
-
-    @classmethod
-    def setUpClass(cls):
-        super(CourseGradingPolicyMissingFieldsTests, cls).setUpClass()
-        cls.create_course_data()
-
-    def test_get(self):
-        """
-        The view should return grading policy for a course.
-        """
-        response = super(CourseGradingPolicyMissingFieldsTests, self).test_get()
-
-        expected = [
-            {
-                "count": 24,
-                "weight": 0.2,
-                "assignment_type": "Homework",
-                "dropped": 0
-            },
-            {
-                "count": None,
                 "weight": 0.8,
                 "assignment_type": "Exam",
                 "dropped": 0
@@ -520,7 +444,7 @@ class CourseBlocksOrNavigationTestMixin(CourseDetailTestMixin, CourseViewTestsMi
         return 'course_structure_api:v0:' + self.block_navigation_view_type
 
     def test_get(self):
-        with check_mongo_calls(4):
+        with check_mongo_calls(3):
             response = super(CourseBlocksOrNavigationTestMixin, self).test_get()
 
         # verify root element
@@ -533,7 +457,7 @@ class CourseBlocksOrNavigationTestMixin(CourseDetailTestMixin, CourseViewTestsMi
         blocks = response.data[self.block_navigation_view_type]
 
         # verify number of blocks
-        self.assertEquals(len(blocks), 5)
+        self.assertEquals(len(blocks), 4)
 
         # verify fields in blocks
         for field, block in product(self.block_fields, blocks.values()):
@@ -550,7 +474,6 @@ class CourseBlocksOrNavigationTestMixin(CourseDetailTestMixin, CourseViewTestsMi
         response = self.http_get_for_course(data={'block_json': 'incorrect'})
         self.assertEqual(response.status_code, 400)
 
-    @SharedModuleStoreTestCase.modifies_courseware
     def test_no_access_to_block(self):
         """
         Verifies the view returns only the top-level course block, excluding the sequential block
@@ -596,23 +519,6 @@ class CourseBlocksTestMixin(object):
         self.assertIn('problem', root_block['block_count'])
         self.assertEquals(root_block['block_count']['problem'], 1)
 
-    def test_multi_device_support(self):
-        """
-        Verifies the view's response when multi_device support is requested.
-        """
-        response = self.http_get_for_course(
-            data={'fields': 'multi_device'}
-        )
-        self.assertEquals(response.status_code, 200)
-
-        for block, expected_multi_device_support in (
-                (self.problem, True),
-                (self.html, True),
-                (self.video, False)
-        ):
-            block_response = response.data[self.block_navigation_view_type][unicode(block.location)]
-            self.assertEquals(block_response['multi_device'], expected_multi_device_support)
-
 
 class CourseNavigationTestMixin(object):
     """
@@ -629,7 +535,7 @@ class CourseNavigationTestMixin(object):
         )
         root_block = response.data[self.block_navigation_view_type][unicode(self.course.location)]
         self.assertIn('descendants', root_block)
-        self.assertEquals(len(root_block['descendants']), 4)
+        self.assertEquals(len(root_block['descendants']), 3)
 
     def test_depth(self):
         """
@@ -639,7 +545,7 @@ class CourseNavigationTestMixin(object):
 
         container_descendants = (
             (self.course.location, 1),
-            (self.sequential.location, 3),
+            (self.sequential.location, 2),
         )
         for container_location, expected_num_descendants in container_descendants:
             block = response.data[self.block_navigation_view_type][unicode(container_location)]
@@ -647,20 +553,15 @@ class CourseNavigationTestMixin(object):
             self.assertEquals(len(block['descendants']), expected_num_descendants)
 
 
-class CourseBlocksTests(CourseBlocksOrNavigationTestMixin, CourseBlocksTestMixin, SharedModuleStoreTestCase):
+class CourseBlocksTests(CourseBlocksOrNavigationTestMixin, CourseBlocksTestMixin, ModuleStoreTestCase):
     """
     A Test class for testing the Course 'blocks' view.
     """
     block_navigation_view_type = 'blocks'
     container_fields = ['children']
 
-    @classmethod
-    def setUpClass(cls):
-        super(CourseBlocksTests, cls).setUpClass()
-        cls.create_course_data()
 
-
-class CourseNavigationTests(CourseBlocksOrNavigationTestMixin, CourseNavigationTestMixin, SharedModuleStoreTestCase):
+class CourseNavigationTests(CourseBlocksOrNavigationTestMixin, CourseNavigationTestMixin, ModuleStoreTestCase):
     """
     A Test class for testing the Course 'navigation' view.
     """
@@ -668,21 +569,11 @@ class CourseNavigationTests(CourseBlocksOrNavigationTestMixin, CourseNavigationT
     container_fields = ['descendants']
     block_fields = []
 
-    @classmethod
-    def setUpClass(cls):
-        super(CourseNavigationTests, cls).setUpClass()
-        cls.create_course_data()
-
 
 class CourseBlocksAndNavigationTests(CourseBlocksOrNavigationTestMixin, CourseBlocksTestMixin,
-                                     CourseNavigationTestMixin, SharedModuleStoreTestCase):
+                                     CourseNavigationTestMixin, ModuleStoreTestCase):
     """
     A Test class for testing the Course 'blocks+navigation' view.
     """
     block_navigation_view_type = 'blocks+navigation'
     container_fields = ['children', 'descendants']
-
-    @classmethod
-    def setUpClass(cls):
-        super(CourseBlocksAndNavigationTests, cls).setUpClass()
-        cls.create_course_data()

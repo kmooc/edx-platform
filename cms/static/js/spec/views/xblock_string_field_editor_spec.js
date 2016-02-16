@@ -52,6 +52,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                    expectEditCanceled = function (test, fieldEditorView, options) {
                        var requests, initialRequests, displayNameInput;
                        requests = AjaxHelpers.requests(test);
+                       initialRequests = requests.length;
                        displayNameInput = EditHelpers.inlineEdit(fieldEditorView.$el, options.newTitle);
                        if (options.pressEscape) {
                            displayNameInput.simulate("keydown", { keyCode: $.simulate.keyCode.ESCAPE });
@@ -62,7 +63,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                            displayNameInput.change();
                        }
                        // No requests should be made when the edit is cancelled client-side
-                       AjaxHelpers.expectNoRequests(requests);
+                       expect(initialRequests).toBe(requests.length);
                        EditHelpers.verifyInlineEditChange(fieldEditorView.$el, initialDisplayName);
                        expect(fieldEditorView.model.get('display_name')).toBe(initialDisplayName);
                    };
@@ -84,13 +85,14 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                    it('does not change the title when a display name update fails', function () {
                        var requests, fieldEditorView, initialRequests;
                        requests = AjaxHelpers.requests(this);
+                       initialRequests = requests.length;
                        fieldEditorView = getFieldEditorView().render();
                        EditHelpers.inlineEdit(fieldEditorView.$el, updatedDisplayName);
                        fieldEditorView.$('button[name=submit]').click();
                        expectPostedNewDisplayName(requests, updatedDisplayName);
                        AjaxHelpers.respondWithError(requests);
                        // No fetch operation should occur.
-                       AjaxHelpers.expectNoRequests(requests);
+                       expect(initialRequests + 1).toBe(requests.length);
                        EditHelpers.verifyInlineEditChange(fieldEditorView.$el, initialDisplayName, updatedDisplayName);
                    });
 

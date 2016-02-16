@@ -9,7 +9,7 @@ import os
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.contrib.auth.models import Group
-from path import Path as path
+from path import path
 from lxml import etree
 
 

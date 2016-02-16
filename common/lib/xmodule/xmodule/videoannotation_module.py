@@ -13,8 +13,7 @@ from xblock.fragment import Fragment
 
 import textwrap
 
-# Make '_' a no-op so we can scrape strings. Using lambda instead of
-#  `django.utils.translation.ugettext_noop` because Django cannot be imported in this file
+# Make '_' a no-op so we can scrape strings
 _ = lambda text: text
 
 
@@ -128,7 +127,7 @@ class VideoAnnotationModule(AnnotatableFields, XModule):
 
         context = {
             'course_key': self.runtime.course_id,
-            'display_name': self.display_name_with_default_escaped,
+            'display_name': self.display_name_with_default,
             'instructions_html': self.instructions,
             'sourceUrl': self.sourceurl,
             'typeSource': extension,

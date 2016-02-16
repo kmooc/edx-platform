@@ -11,7 +11,9 @@ import unittest
 
 from dark_lang.middleware import DarkLangMiddleware
 from dark_lang.models import DarkLangConfig
-from django.utils.translation import LANGUAGE_SESSION_KEY
+# TODO PLAT-671 Import from Django 1.8
+# from django.utils.translation import LANGUAGE_SESSION_KEY
+from django_locale.trans_real import LANGUAGE_SESSION_KEY
 from student.tests.factories import UserFactory
 
 

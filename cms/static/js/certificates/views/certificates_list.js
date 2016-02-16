@@ -15,8 +15,6 @@ function (gettext, ListView, CertificateItemView) {
         // Translators: this refers to a collection of certificates.
         itemCategoryDisplayName: gettext('certificate'),
 
-        newItemMessage: gettext('Set up your certificate'),
-
         // Translators: This line refers to the initial state of the form when no data has been inserted
         emptyMessage: gettext('You have not created any certificates yet.'),
 

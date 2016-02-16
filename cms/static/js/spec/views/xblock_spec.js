@@ -1,9 +1,9 @@
-define(["jquery", "URI", "common/js/spec_helpers/ajax_helpers", "common/js/components/utils/view_utils",
-        "js/views/xblock", "js/models/xblock_info", "xmodule", "coffee/src/main", "xblock/cms.runtime.v1"],
-    function ($, URI, AjaxHelpers, ViewUtils, XBlockView, XBlockInfo) {
-        "use strict";
+define([ "jquery", "common/js/spec_helpers/ajax_helpers", "URI", "js/views/xblock", "js/models/xblock_info",
+    "xmodule", "coffee/src/main", "xblock/cms.runtime.v1"],
+    function ($, AjaxHelpers, URI, XBlockView, XBlockInfo) {
+
         describe("XBlockView", function() {
-            var model, xblockView, mockXBlockHtml;
+            var model, xblockView, mockXBlockHtml, respondWithMockXBlockFragment;
 
             beforeEach(function () {
                 model = new XBlockInfo({
@@ -18,10 +18,15 @@ define(["jquery", "URI", "common/js/spec_helpers/ajax_helpers", "common/js/compo
 
             mockXBlockHtml = readFixtures('mock/mock-xblock.underscore');
 
+            respondWithMockXBlockFragment = function(requests, response) {
+                var requestIndex = requests.length - 1;
+                AjaxHelpers.respondWithJson(requests, response, requestIndex);
+            };
+
             it('can render a nested xblock', function() {
                 var requests = AjaxHelpers.requests(this);
                 xblockView.render();
-                AjaxHelpers.respondWithJson(requests, {
+                respondWithMockXBlockFragment(requests, {
                     html: mockXBlockHtml,
                     resources: []
                 });
@@ -43,7 +48,7 @@ define(["jquery", "URI", "common/js/spec_helpers/ajax_helpers", "common/js/compo
                     });
                     // Note: this mock response will call the AJAX success function synchronously
                     // so the promise variable defined above will be available.
-                    AjaxHelpers.respondWithJson(requests, {
+                    respondWithMockXBlockFragment(requests, {
                         html: mockXBlockHtml,
                         resources: resources
                     });
@@ -89,11 +94,11 @@ define(["jquery", "URI", "common/js/spec_helpers/ajax_helpers", "common/js/compo
 
                 it('aborts rendering when a dependent script fails to load', function() {
                     var requests = AjaxHelpers.requests(this),
-                        missingJavaScriptUrl = "no_such_file.js",
+                        mockJavaScriptUrl = "mock.js",
                         promise;
-                    spyOn(ViewUtils, 'loadJavaScript').andReturn($.Deferred().reject().promise());
+                    spyOn($, 'getScript').andReturn($.Deferred().reject().promise());
                     promise = postXBlockRequest(requests, [
-                        ["hash5", { mimetype: "application/javascript", kind: "url", data: missingJavaScriptUrl }]
+                        ["hash5", { mimetype: "application/javascript", kind: "url", data: mockJavaScriptUrl }]
                     ]);
                     expect(promise.isRejected()).toBe(true);
                 });
@@ -104,7 +109,7 @@ define(["jquery", "URI", "common/js/spec_helpers/ajax_helpers", "common/js/compo
                     postXBlockRequest(AjaxHelpers.requests(this), []);
                     xblockView.$el.find(".notification-action-button").click();
                     expect(notifySpy).toHaveBeenCalledWith("add-missing-groups", model.get("id"));
-                });
+                })
             });
         });
     });

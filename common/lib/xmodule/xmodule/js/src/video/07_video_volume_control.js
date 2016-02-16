@@ -38,25 +38,13 @@ function() {
         step: 20,
 
         template: [
-            '<div class="volume" role="application">',
-                '<button class="control" aria-disabled="false" aria-label="',
-                    gettext('Volume: Click on this button to mute or unmute this video or press UP or ' +
-                        'DOWN buttons to increase or decrease volume level.'),
-                    '" aria-expanded="false">',
-                    '<span class="icon-fallback-img">',
-                        '<span class="icon fa fa-volume-up" aria-hidden="true"></span>',
-                        '<span class="sr control-text">',
-                            gettext('Volume'),
-                        '</span>',
-                    '</span>',
-                '</button>',
-                '<div class="volume-slider-container" aria-hidden="true">',
-                    '<div class="volume-slider" ',
-                        'role="slider"',
-                        'aria-orientation="vertical" ',
-                        'aria-valuemin="0" ',
-                        'aria-valuemax="100" ',
-                        'aria-valuenow=""></div>',
+            '<div class="volume">',
+                '<a href="#" role="button" aria-disabled="false" title="',
+                    gettext('Volume'), '" aria-label="',
+                    gettext('Click on this button to mute or unmute this video or press UP or DOWN buttons to increase or decrease volume level.'),
+                    '"></a>',
+                '<div role="presentation" class="volume-slider-container">',
+                    '<div class="volume-slider"></div>',
                 '</div>',
             '</div>'
         ].join(''),
@@ -101,7 +89,7 @@ function() {
             // Youtube iframe react on key buttons and has his own handlers.
             // So, we disallow focusing on iframe.
             this.state.el.find('iframe').attr('tabindex', -1);
-            this.button = this.el.children('.control');
+            this.button = this.el.children('a');
             this.cookie = new CookieManager(this.min, this.max);
             this.a11y = new Accessibility(
                 this.button, this.min, this.max, this.i18n
@@ -140,17 +128,18 @@ function() {
         /** Bind any necessary function callbacks to DOM events. */
         bindHandlers: function() {
             this.state.el.on({
+                'keydown': this.keyDownHandler,
                 'play.volume': _.once(this.updateVolumeSilently),
                 'volumechange': this.onVolumeChangeHandler
             });
-            this.state.el.find('.volume').on({
+            this.el.on({
                 'mouseenter': this.openMenu,
                 'mouseleave': this.closeMenu
             });
             this.button.on({
-                'keydown': this.keyDownHandler,
                 'click': false,
                 'mousedown': this.toggleMuteHandler,
+                'keydown': this.keyDownButtonHandler,
                 'focus': this.openMenu,
                 'blur': this.closeMenu
             });
@@ -205,8 +194,6 @@ function() {
             var volume = Math.min(this.getVolume() + this.step, this.max);
 
             this.setVolume(volume, false, false);
-            this.el.find('.volume-slider')
-                .attr('aria-valuenow', volume);
         },
 
         /** Decreases current volume level using previously defined step. */
@@ -214,15 +201,11 @@ function() {
             var volume = Math.max(this.getVolume() - this.step, this.min);
 
             this.setVolume(volume, false, false);
-            this.el.find('.volume-slider')
-                .attr('aria-valuenow', volume);
         },
 
         /** Updates volume slider view. */
         updateSliderView: function (volume) {
             this.volumeSlider.slider('value', volume);
-            this.el.find('.volume-slider')
-                .attr('aria-valuenow', volume);
         },
 
         /**
@@ -240,8 +223,6 @@ function() {
 
             volume = muteStatus ? 0 : this.storedVolume;
             this.setVolume(volume, false, false);
-            this.el.find('.volume-slider')
-                .attr('aria-valuenow', volume);
         },
 
         /**
@@ -260,18 +241,6 @@ function() {
             var action = isMuted ? 'addClass' : 'removeClass';
 
             this.el[action]('is-muted');
-
-            if (isMuted) {
-                this.el
-                    .find('.control .icon')
-                        .removeClass('fa-volume-up')
-                        .addClass('fa-volume-off');
-            } else {
-                this.el
-                    .find('.control .icon')
-                        .removeClass('fa-volume-off')
-                        .addClass('fa-volume-up');
-            }
         },
 
         /** Toggles the state of the volume button. */
@@ -297,13 +266,11 @@ function() {
         /** Opens volume menu. */
         openMenu: function() {
             this.el.addClass('is-opened');
-            this.button.attr('aria-expanded', 'true');
         },
 
         /** Closes speed menu. */
         closeMenu: function() {
             this.el.removeClass('is-opened');
-            this.button.attr('aria-expanded', 'false');
         },
 
         /**
@@ -343,17 +310,6 @@ function() {
 
                     this.decreaseVolume();
                     return false;
-
-                case KEY.SPACE:
-                case KEY.ENTER:
-                    // Shift + Enter keyboard shortcut might be used by
-                    // screen readers. In this case, do nothing.
-                    if (event.shiftKey) {
-                        return true;
-                    }
-
-                    this.toggleMute();
-                    return false;
             }
 
             return true;
@@ -377,6 +333,7 @@ function() {
                 case KEY.ENTER:
                 case KEY.SPACE:
                     this.toggleMute();
+
                     return false;
             }
 
@@ -390,8 +347,6 @@ function() {
          */
         onSlideHandler: function(event, ui) {
             this.setVolume(ui.value, false, true);
-            this.el.find('.volume-slider')
-                .attr('aria-valuenow', ui.volume);
         },
 
         /**
@@ -440,8 +395,10 @@ function() {
         initialize: function() {
             this.liveRegion = $('<div />', {
                 'class':  'sr video-live-region',
+                'role': 'status',
                 'aria-hidden': 'false',
-                'aria-live': 'polite'
+                'aria-live': 'polite',
+                'aria-atomic': 'false'
             });
 
             this.button.after(this.liveRegion);
@@ -456,9 +413,6 @@ function() {
                 this.getVolumeDescription(volume),
                 this.i18n['Volume'] + '.'
             ].join(' '));
-
-            $(this.button).parent().find('.volume-slider')
-                .attr('aria-valuenow', volume);
         },
 
         /**

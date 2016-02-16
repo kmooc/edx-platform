@@ -1,9 +1,9 @@
 """
-Settings for Bok Choy tests that are used when running Studio.
+Settings for Bok Choy tests that are used for running CMS and LMS.
 
 Bok Choy uses two different settings files:
 1. test_static_optimized is used when invoking collectstatic
-2. bok_choy is used when running the tests
+2. bok_choy is used when running CMS and LMS
 
 Note: it isn't possible to have a single settings file, because Django doesn't
 support both generating static assets to a directory and also serving static
@@ -11,7 +11,12 @@ from the same directory.
 """
 
 import os
-from path import Path as path
+from path import path
+
+# Pylint gets confused by path.py instances, which report themselves as class
+# objects. As a result, pylint applies the wrong regex in validating names,
+# and throws spurious errors. Therefore, we disable invalid-name checking.
+# pylint: disable=invalid-name
 
 
 ########################## Prod-like settings ###################################
@@ -21,7 +26,7 @@ from path import Path as path
 # This is a convenience for ensuring (a) that we can consistently find the files
 # and (b) that the files are the same in Jenkins as in local dev.
 os.environ['SERVICE_VARIANT'] = 'bok_choy'
-os.environ['CONFIG_ROOT'] = path(__file__).abspath().dirname()
+os.environ['CONFIG_ROOT'] = path(__file__).abspath().dirname()  # pylint: disable=no-value-for-parameter
 
 from .aws import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
@@ -31,7 +36,7 @@ from .aws import *  # pylint: disable=wildcard-import, unused-wildcard-import
 INSTALLED_APPS += ('django_extensions',)
 
 # Redirect to the test_root folder within the repo
-TEST_ROOT = REPO_ROOT / "test_root"
+TEST_ROOT = REPO_ROOT / "test_root"  # pylint: disable=no-value-for-parameter
 GITHUB_REPO_ROOT = (TEST_ROOT / "data").abspath()
 LOG_DIR = (TEST_ROOT / "log").abspath()
 DATA_DIR = TEST_ROOT / "data"
@@ -40,7 +45,7 @@ DATA_DIR = TEST_ROOT / "data"
 update_module_store_settings(
     MODULESTORE,
     module_store_options={
-        'fs_root': (TEST_ROOT / "data").abspath(),
+        'fs_root': (TEST_ROOT / "data").abspath(),  # pylint: disable=no-value-for-parameter
     },
     xml_store_options={
         'data_dir': (TEST_ROOT / "data").abspath(),
@@ -57,7 +62,7 @@ DEBUG = True
 # Note: optimized files for testing are generated with settings from test_static_optimized
 STATIC_URL = "/static/"
 STATICFILES_FINDERS = (
-    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'staticfiles.finders.FileSystemFinder',
 )
 STATICFILES_DIRS = (
     (TEST_ROOT / "staticfiles" / "cms").abspath(),
@@ -93,16 +98,8 @@ FEATURES['LICENSING'] = True
 FEATURES['ENABLE_MOBILE_REST_API'] = True  # Enable video bumper in Studio
 FEATURES['ENABLE_VIDEO_BUMPER'] = True  # Enable video bumper in Studio settings
 
-# Enable partner support link in Studio footer
-PARTNER_SUPPORT_EMAIL = 'partner-support@example.com'
-
-# Disable some block types to test block deprecation logic
-DEPRECATED_BLOCK_TYPES = ['poll', 'survey']
-
 ########################### Entrance Exams #################################
 FEATURES['ENTRANCE_EXAMS'] = True
-
-FEATURES['ENABLE_SPECIAL_EXAMS'] = True
 
 # Point the URL used to test YouTube availability to our stub YouTube server
 YOUTUBE_PORT = 9080
@@ -112,16 +109,15 @@ YOUTUBE['TEXT_API']['url'] = "127.0.0.1:{0}/test_transcripts_youtube/".format(YO
 
 FEATURES['ENABLE_COURSEWARE_INDEX'] = True
 FEATURES['ENABLE_LIBRARY_INDEX'] = True
-
-FEATURES['ORGANIZATIONS_APP'] = True
 SEARCH_ENGINE = "search.tests.mock_search_engine.MockSearchEngine"
 # Path at which to store the mock index
 MOCK_SEARCH_BACKING_FILE = (
-    TEST_ROOT / "index_file.dat"
+    TEST_ROOT / "index_file.dat"  # pylint: disable=no-value-for-parameter
 ).abspath()
 
-# this secret key should be the same as lms/envs/bok_choy.py's
-SECRET_KEY = "very_secret_bok_choy_key"
+# Generate a random UUID so that different runs of acceptance tests don't break each other
+import uuid
+SECRET_KEY = uuid.uuid4().hex
 
 #####################################################################
 # Lastly, see if the developer has any local overrides.

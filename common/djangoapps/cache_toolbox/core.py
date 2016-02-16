@@ -33,8 +33,8 @@ def get_instance(model, instance_or_pk, timeout=None, using=None):
         <User: lamby>
         >>> User.objects.get(pk=1) == get_instance(User, 1)
         True
-
     """
+
     pk = getattr(instance_or_pk, 'pk', instance_or_pk)
     key = instance_key(model, instance_or_pk)
     data = cache.get(key)
@@ -59,7 +59,7 @@ def get_instance(model, instance_or_pk, timeout=None, using=None):
             # fallback and return the underlying instance
             cache.delete(key)
 
-    # Use the default manager so we are never filtered by a .get_queryset()
+    # Use the default manager so we are never filtered by a .get_query_set()
 
 #    import logging
 #    log = logging.getLogger("tracking")
@@ -94,6 +94,7 @@ def delete_instance(model, *instance_or_pk):
     """
     Purges the cache keys for the instances of this model.
     """
+
     cache.delete_many([instance_key(model, x) for x in instance_or_pk])
 
 
@@ -101,10 +102,10 @@ def instance_key(model, instance_or_pk):
     """
     Returns the cache key for this (model, instance) pair.
     """
-    # pylint: disable=protected-access
+
     return '%s.%s:%d' % (
         model._meta.app_label,
-        model._meta.model_name,
+        model._meta.module_name,
         getattr(instance_or_pk, 'pk', instance_or_pk),
     )
 

@@ -43,10 +43,7 @@ class LearnerProfilePage(FieldsMixin, PageObject):
         """
         Check if browser is showing correct page.
         """
-        return all([
-            self.q(css='body.view-profile .account-settings-container').present,
-            not self.q(css='ui-loading-indicator').visible
-        ])
+        return 'Learner Profile' in self.browser.title
 
     @property
     def privacy(self):
@@ -178,7 +175,7 @@ class LearnerProfilePage(FieldsMixin, PageObject):
         """
         self.wait_for_field('image')
         default_links = self.q(css='.image-frame').attrs('src')
-        return 'profiles/default' in default_links[0] if default_links else False
+        return 'default-profile' in default_links[0] if default_links else False
 
     def mouse_hover(self, element):
         """
@@ -220,8 +217,11 @@ class LearnerProfilePage(FieldsMixin, PageObject):
 
         self.browser.execute_script('$(".upload-submit").show();')
 
+        # First send_keys will initialize the jquery auto upload plugin.
+        self.q(css='.upload-button-input').results[0].send_keys(file_path)
         self.q(css='.upload-submit').first.click()
         self.q(css='.upload-button-input').results[0].send_keys(file_path)
+
         self.wait_for_ajax()
 
     @property
@@ -253,6 +253,10 @@ class LearnerProfilePage(FieldsMixin, PageObject):
         self.wait_for_ajax()
 
         self.wait_for_element_visibility('.image-wrapper', "remove button is visible")
+        self.browser.execute_script('$(".u-field-remove-button").css("opacity",1);')
+        self.mouse_hover(self.browser.find_element_by_css_selector('.image-wrapper'))
+
+        self.wait_for_element_visibility('.u-field-remove-button', "remove button is visible")
         self.q(css='.u-field-remove-button').first.click()
 
         self.wait_for_ajax()

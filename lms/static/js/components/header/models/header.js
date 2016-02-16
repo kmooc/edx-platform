@@ -8,8 +8,7 @@ define(['backbone'], function (Backbone) {
         defaults: {
             'title': '',
             'description': '',
-            'breadcrumbs': null,
-            'nav_aria_label': ''
+            'breadcrumbs': null
         }
     });
 

@@ -175,7 +175,8 @@ define(['js/capa/drag_and_drop/draggable_events', 'js/capa/drag_and_drop/draggab
                 'style=" ' +
                     'width: 100px; ' +
                     'height: 100px; ' +
-                    'display: inline-block; ' +
+                    'display: inline; ' +
+                    'float: left; ' +
                     'overflow: hidden; ' +
                     'border-left: 1px solid #CCC; ' +
                     'border-right: 1px solid #CCC; ' +
@@ -288,7 +289,7 @@ define(['js/capa/drag_and_drop/draggable_events', 'js/capa/drag_and_drop/draggab
 
                 draggableObj.iconEl.appendTo(draggableObj.containerEl);
 
-                draggableObj.iconWidth = draggableObj.iconEl.width() + 1;
+                draggableObj.iconWidth = draggableObj.iconEl.width();
                 draggableObj.iconHeight = draggableObj.iconEl.height();
                 draggableObj.iconWidthSmall = draggableObj.iconWidth;
                 draggableObj.iconHeightSmall = draggableObj.iconHeight;

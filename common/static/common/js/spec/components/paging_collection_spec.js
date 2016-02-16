@@ -10,13 +10,12 @@ define(['jquery',
         'use strict';
 
         describe('PagingCollection', function () {
-            var collection;
-            var server = {
+            var collection, requests, server, assertQueryParams;
+            server = {
                 isZeroIndexed: false,
                 count: 43,
-                respond: function (requests) {
-                    var request = AjaxHelpers.currentRequest(requests),
-                        params = (new URI(request.url)).query(true),
+                respond: function () {
+                    var params = (new URI(requests[requests.length - 1].url)).query(true),
                         page = parseInt(params['page'], 10),
                         page_size = parseInt(params['page_size'], 10),
                         page_count = Math.ceil(this.count / page_size);
@@ -24,7 +23,7 @@ define(['jquery',
                     // Make zeroPage consistently start at zero for ease of calculation
                     var zeroPage = page - (this.isZeroIndexed ? 0 : 1);
                     if (zeroPage < 0 || zeroPage > page_count) {
-                        AjaxHelpers.respondWithError(requests, 404);
+                        AjaxHelpers.respondWithError(requests, 404, {}, requests.length - 1);
                     } else {
                         AjaxHelpers.respondWithJson(requests, {
                             'count': this.count,
@@ -32,13 +31,12 @@ define(['jquery',
                             'num_pages': page_count,
                             'start': zeroPage * page_size,
                             'results': []
-                        });
+                        }, requests.length - 1);
                     }
                 }
             };
-            var assertQueryParams = function (requests, params) {
-                var request = AjaxHelpers.currentRequest(requests),
-                    urlParams = (new URI(request.url)).query(true);
+            assertQueryParams = function (params) {
+                var urlParams = (new URI(requests[requests.length - 1].url)).query(true);
                 _.each(params, function (value, key) {
                     expect(urlParams[key]).toBe(value);
                 });
@@ -47,6 +45,7 @@ define(['jquery',
             beforeEach(function () {
                 collection = new PagingCollection();
                 collection.perPage = 10;
+                requests = AjaxHelpers.requests(this);
                 server.isZeroIndexed = false;
                 server.count = 43;
             });
@@ -70,11 +69,10 @@ define(['jquery',
             });
 
             it('can set the sort field', function () {
-                var requests = AjaxHelpers.requests(this);
                 collection.registerSortableField('test_field', 'Test Field');
                 collection.setSortField('test_field', false);
-                collection.refresh();
-                assertQueryParams(requests, {'sort_order': 'test_field'});
+                expect(requests.length).toBe(1);
+                assertQueryParams({'sort_order': 'test_field'});
                 expect(collection.sortField).toBe('test_field');
                 expect(collection.sortDisplayName()).toBe('Test Field');
             });
@@ -82,7 +80,7 @@ define(['jquery',
             it('can set the filter field', function () {
                 collection.registerFilterableField('test_field', 'Test Field');
                 collection.setFilterField('test_field');
-                collection.refresh();
+                expect(requests.length).toBe(1);
                 // The default implementation does not send any query params for filtering
                 expect(collection.filterField).toBe('test_field');
                 expect(collection.filterDisplayName()).toBe('Test Field');
@@ -90,9 +88,11 @@ define(['jquery',
 
             it('can set the sort direction', function () {
                 collection.setSortDirection(PagingCollection.SortDirection.ASCENDING);
+                expect(requests.length).toBe(1);
                 // The default implementation does not send any query params for sort direction
                 expect(collection.sortDirection).toBe(PagingCollection.SortDirection.ASCENDING);
                 collection.setSortDirection(PagingCollection.SortDirection.DESCENDING);
+                expect(requests.length).toBe(2);
                 expect(collection.sortDirection).toBe(PagingCollection.SortDirection.DESCENDING);
             });
 
@@ -113,12 +113,11 @@ define(['jquery',
                 'queries with page, page_size, and sort_order parameters when zero indexed': [true, 2],
                 'queries with page, page_size, and sort_order parameters when one indexed': [false, 3],
             }, function (isZeroIndexed, page) {
-                var requests = AjaxHelpers.requests(this);
                 collection.isZeroIndexed = isZeroIndexed;
                 collection.perPage = 5;
                 collection.sortField = 'test_field';
                 collection.setPage(3);
-                assertQueryParams(requests, {'page': page.toString(), 'page_size': '5', 'sort_order': 'test_field'});
+                assertQueryParams({'page': page.toString(), 'page_size': '5', 'sort_order': 'test_field'});
             });
 
             SpecHelpers.withConfiguration({
@@ -130,32 +129,29 @@ define(['jquery',
             }, function () {
                 describe('setPage', function() {
                     it('triggers a reset event when the page changes successfully', function () {
-                        var requests = AjaxHelpers.requests(this),
-                            resetTriggered = false;
+                        var resetTriggered = false;
                         collection.on('reset', function () { resetTriggered = true; });
                         collection.setPage(3);
-                        server.respond(requests);
+                        server.respond();
                         expect(resetTriggered).toBe(true);
                     });
 
                     it('triggers an error event when the requested page is out of range', function () {
-                        var requests = AjaxHelpers.requests(this),
-                            errorTriggered = false;
+                        var errorTriggered = false;
                         collection.on('error', function () { errorTriggered = true; });
                         collection.setPage(17);
-                        server.respond(requests);
+                        server.respond();
                         expect(errorTriggered).toBe(true);
                     });
 
                     it('triggers an error event if the server responds with a 500', function () {
-                        var requests = AjaxHelpers.requests(this),
-                            errorTriggered = false;
+                        var errorTriggered = false;
                         collection.on('error', function () { errorTriggered = true; });
                         collection.setPage(2);
                         expect(collection.getPage()).toBe(2);
-                        server.respond(requests);
+                        server.respond();
                         collection.setPage(3);
-                        AjaxHelpers.respondWithError(requests, 500);
+                        AjaxHelpers.respondWithError(requests, 500, {}, requests.length - 1);
                         expect(errorTriggered).toBe(true);
                         expect(collection.getPage()).toBe(2);
                     });
@@ -163,12 +159,11 @@ define(['jquery',
 
                 describe('getPage', function () {
                     it('returns the correct page', function () {
-                        var requests = AjaxHelpers.requests(this);
                         collection.setPage(1);
-                        server.respond(requests);
+                        server.respond();
                         expect(collection.getPage()).toBe(1);
                         collection.setPage(3);
-                        server.respond(requests);
+                        server.respond();
                         expect(collection.getPage()).toBe(3);
                     });
                 });
@@ -182,10 +177,9 @@ define(['jquery',
                             'returns false on the last page': [5, 43, false]
                         },
                         function (page, count, result) {
-                            var requests = AjaxHelpers.requests(this);
                             server.count = count;
                             collection.setPage(page);
-                            server.respond(requests);
+                            server.respond();
                             expect(collection.hasNextPage()).toBe(result);
                         }
                     );
@@ -200,10 +194,9 @@ define(['jquery',
                             'returns false on the first page': [1, 43, false]
                         },
                         function (page, count, result) {
-                            var requests = AjaxHelpers.requests(this);
                             server.count = count;
                             collection.setPage(page);
-                            server.respond(requests);
+                            server.respond();
                             expect(collection.hasPreviousPage()).toBe(result);
                         }
                     );
@@ -216,14 +209,13 @@ define(['jquery',
                             'silently fails on the last page': [5, 43, 5]
                         },
                         function (page, count, newPage) {
-                            var requests = AjaxHelpers.requests(this);
                             server.count = count;
                             collection.setPage(page);
-                            server.respond(requests);
+                            server.respond();
                             expect(collection.getPage()).toBe(page);
                             collection.nextPage();
                             if (requests.length > 1) {
-                                server.respond(requests);
+                                server.respond();
                             }
                             expect(collection.getPage()).toBe(newPage);
                         }
@@ -237,18 +229,17 @@ define(['jquery',
                             'silently fails on the first page': [1, 43, 1]
                         },
                         function (page, count, newPage) {
-                            var requests = AjaxHelpers.requests(this);
                             server.count = count;
                             collection.setPage(page);
-                            server.respond(requests);
+                            server.respond();
                             expect(collection.getPage()).toBe(page);
                             collection.previousPage();
                             if (requests.length > 1) {
-                                server.respond(requests);
+                                server.respond();
                             }
                             expect(collection.getPage()).toBe(newPage);
                         }
-                    );
+                    )
                 });
             });
         });

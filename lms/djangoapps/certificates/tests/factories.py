@@ -1,80 +1,50 @@
 # Factories are self documenting
 # pylint: disable=missing-docstring
-import factory
-from uuid import uuid4
-from django.core.files.base import ContentFile
 from factory.django import DjangoModelFactory, ImageField
 
 from student.models import LinkedInAddToProfileConfiguration
 
 from certificates.models import (
     GeneratedCertificate, CertificateStatuses, CertificateHtmlViewConfiguration, CertificateWhitelist, BadgeAssertion,
-    BadgeImageConfiguration, CertificateInvalidation,
+    BadgeImageConfiguration,
 )
 
 
 class GeneratedCertificateFactory(DjangoModelFactory):
 
-    class Meta(object):
-        model = GeneratedCertificate
+    FACTORY_FOR = GeneratedCertificate
 
     course_id = None
     status = CertificateStatuses.unavailable
     mode = GeneratedCertificate.MODES.honor
     name = ''
-    verify_uuid = uuid4().hex
 
 
 class CertificateWhitelistFactory(DjangoModelFactory):
 
-    class Meta(object):
-        model = CertificateWhitelist
+    FACTORY_FOR = CertificateWhitelist
 
     course_id = None
     whitelist = True
-    notes = 'Test Notes'
-
-
-class CertificateInvalidationFactory(DjangoModelFactory):
-
-    class Meta(object):
-        model = CertificateInvalidation
-
-    notes = 'Test Notes'
-    active = True
 
 
 class BadgeAssertionFactory(DjangoModelFactory):
-    class Meta(object):
-        model = BadgeAssertion
+    FACTORY_FOR = BadgeAssertion
 
     mode = 'honor'
-    data = {
-        'image': 'http://www.example.com/image.png',
-        'json': {'id': 'http://www.example.com/assertion.json'},
-        'issuer': 'http://www.example.com/issuer.json',
-    }
 
 
 class BadgeImageConfigurationFactory(DjangoModelFactory):
 
-    class Meta(object):
-        model = BadgeImageConfiguration
+    FACTORY_FOR = BadgeImageConfiguration
 
     mode = 'honor'
-    icon = factory.LazyAttribute(
-        lambda _: ContentFile(
-            ImageField()._make_data(  # pylint: disable=protected-access
-                {'color': 'blue', 'width': 50, 'height': 50, 'format': 'PNG'}
-            ), 'test.png'
-        )
-    )
+    icon = ImageField(color='blue', height=50, width=50, filename='test.png', format='PNG')
 
 
 class CertificateHtmlViewConfigurationFactory(DjangoModelFactory):
 
-    class Meta(object):
-        model = CertificateHtmlViewConfiguration
+    FACTORY_FOR = CertificateHtmlViewConfiguration
 
     enabled = True
     configuration = """{
@@ -91,31 +61,22 @@ class CertificateHtmlViewConfigurationFactory(DjangoModelFactory):
             },
             "honor": {
                 "certificate_type": "Honor Code",
-                "certificate_title": "Certificate of Achievement",
-                "logo_url": "http://www.edx.org/honor_logo.png"
+                "document_body_class_append": "is-honorcode"
             },
             "verified": {
                 "certificate_type": "Verified",
-                "certificate_title": "Verified Certificate of Achievement"
+                "document_body_class_append": "is-idverified"
             },
             "xseries": {
-                "certificate_title": "XSeries Certificate of Achievement",
-                "certificate_type": "XSeries"
-            },
-            "microsites": {
-                "testmicrosite": {
-                    "company_about_url": "http://www.testmicrosite.org/about-us",
-                    "company_privacy_url": "http://www.testmicrosite.org/edx-privacy-policy",
-                    "company_tos_url": "http://www.testmicrosite.org/edx-terms-service"
-                }
+                "certificate_type": "XSeries",
+                "document_body_class_append": "is-xseries"
             }
         }"""
 
 
 class LinkedInAddToProfileConfigurationFactory(DjangoModelFactory):
 
-    class Meta(object):
-        model = LinkedInAddToProfileConfiguration
+    FACTORY_FOR = LinkedInAddToProfileConfiguration
 
     enabled = True
     company_identifier = "0_0dPSPyS070e0HsE9HNz_13_d11_"

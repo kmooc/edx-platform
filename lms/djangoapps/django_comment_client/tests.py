@@ -1,7 +1,7 @@
 """
 Tests of various permissions levels for the comment client
 """
-import string
+import string       # pylint: disable=deprecated-module
 import random
 
 from django.contrib.auth.models import User

@@ -1,16 +1,14 @@
-;(function (define) {
-    'use strict';
-    define([
-            'jquery',
-            'underscore',
-            'common/js/spec_helpers/template_helpers',
-            'common/js/spec_helpers/ajax_helpers',
-            'js/student_account/models/PasswordResetModel',
-            'js/student_account/views/PasswordResetView'
-        ],
-        function($, _, TemplateHelpers, AjaxHelpers, PasswordResetModel, PasswordResetView) {
-
+define([
+    'jquery',
+    'underscore',
+    'common/js/spec_helpers/template_helpers',
+    'common/js/spec_helpers/ajax_helpers',
+    'js/student_account/models/PasswordResetModel',
+    'js/student_account/views/PasswordResetView',
+], function($, _, TemplateHelpers, AjaxHelpers, PasswordResetModel, PasswordResetView) {
         describe('edx.student.account.PasswordResetView', function() {
+            'use strict';
+
             var model = null,
                 view = null,
                 requests = null,
@@ -48,11 +46,11 @@
             };
 
             var submitEmail = function(validationSuccess) {
-                // Create a fake click event
-                var clickEvent = $.Event('click');
-
                 // Simulate manual entry of an email address
                 $('#password-reset-email').val(EMAIL);
+
+                // Create a fake click event
+                var clickEvent = $.Event('click');
 
                 // If validationSuccess isn't passed, we avoid
                 // spying on `view.validate` twice
@@ -143,5 +141,5 @@
                 expect(view.$errors).toHaveClass('hidden');
             });
         });
-    });
-}).call(this, define || RequireJS.define);
+    }
+);

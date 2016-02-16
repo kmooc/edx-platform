@@ -12,7 +12,6 @@ from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
 from django.utils.translation import override as override_language
 
-from course_modes.models import CourseMode
 from student.models import CourseEnrollment, CourseEnrollmentAllowed
 from courseware.models import StudentModule
 from edxmako.shortcuts import render_to_string
@@ -111,16 +110,7 @@ def enroll_email(course_id, student_email, auto_enroll=False, email_students=Fal
     if previous_state.user:
         # if the student is currently unenrolled, don't enroll them in their
         # previous mode
-
-        # for now, White Labels use 'shoppingcart' which is based on the
-        # "honor" course_mode. Given the change to use "audit" as the default
-        # course_mode in Open edX, we need to be backwards compatible with
-        # how White Labels approach enrollment modes.
-        if CourseMode.is_white_label(course_id):
-            course_mode = CourseMode.DEFAULT_SHOPPINGCART_MODE_SLUG
-        else:
-            course_mode = None
-
+        course_mode = u"honor"
         if previous_state.enrollment:
             course_mode = previous_state.mode
 
@@ -271,7 +261,7 @@ def _reset_module_attempts(studentmodule):
     studentmodule.save()
 
 
-def get_email_params(course, auto_enroll, secure=True, course_key=None, display_name=None):
+def get_email_params(course, auto_enroll, secure=True):
     """
     Generate parameters used when parsing email templates.
 
@@ -280,8 +270,6 @@ def get_email_params(course, auto_enroll, secure=True, course_key=None, display_
     """
 
     protocol = 'https' if secure else 'http'
-    course_key = course_key or course.id.to_deprecated_string()
-    display_name = display_name or course.display_name_with_default_escaped
 
     stripped_site_name = microsite.get_value(
         'SITE_NAME',
@@ -297,7 +285,7 @@ def get_email_params(course, auto_enroll, secure=True, course_key=None, display_
     course_url = u'{proto}://{site}{path}'.format(
         proto=protocol,
         site=stripped_site_name,
-        path=reverse('course_root', kwargs={'course_id': course_key})
+        path=reverse('course_root', kwargs={'course_id': course.id.to_deprecated_string()})
     )
 
     # We can't get the url to the course's About page if the marketing site is enabled.
@@ -306,7 +294,7 @@ def get_email_params(course, auto_enroll, secure=True, course_key=None, display_
         course_about_url = u'{proto}://{site}{path}'.format(
             proto=protocol,
             site=stripped_site_name,
-            path=reverse('about_course', kwargs={'course_id': course_key})
+            path=reverse('about_course', kwargs={'course_id': course.id.to_deprecated_string()})
         )
 
     is_shib_course = uses_shib(course)
@@ -316,7 +304,6 @@ def get_email_params(course, auto_enroll, secure=True, course_key=None, display_
         'site_name': stripped_site_name,
         'registration_url': registration_url,
         'course': course,
-        'display_name': display_name,
         'auto_enroll': auto_enroll,
         'course_url': course_url,
         'course_about_url': course_about_url,
@@ -334,7 +321,6 @@ def send_mail_to_student(student, param_dict, language=None):
     [
         `site_name`: name given to edX instance (a `str`)
         `registration_url`: url for registration (a `str`)
-        `display_name` : display name of a course (a `str`)
         `course_id`: id of course (a `str`)
         `auto_enroll`: user input option (a `str`)
         `course_url`: url of course (a `str`)
@@ -352,8 +338,8 @@ def send_mail_to_student(student, param_dict, language=None):
     """
 
     # add some helpers and microconfig subsitutions
-    if 'display_name' in param_dict:
-        param_dict['course_name'] = param_dict['display_name']
+    if 'course' in param_dict:
+        param_dict['course_name'] = param_dict['course'].display_name_with_default
 
     param_dict['site_name'] = microsite.get_value(
         'SITE_NAME',
@@ -427,7 +413,6 @@ def render_message_to_string(subject_template, message_template, param_dict, lan
     Returns two strings that correspond to the rendered, translated email
     subject and message.
     """
-    language = language or settings.LANGUAGE_CODE
     with override_language(language):
         return get_subject_and_message(subject_template, message_template, param_dict)
 
